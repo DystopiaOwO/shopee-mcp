@@ -1,6 +1,24 @@
 node_modules/
 build/
 .env
+.env.*
+!.env.example
 .cursor/mcp.json
 *.js.map
 *.d.ts.map
+
+# Local authenticated browser/session state — treat like credentials.
+.chrome-profile/
+chrome-profile/
+*.storage-state.json
+storage-state*.json
+
+# Never commit captured Shopee account/cart traffic or debug artifacts.
+*.har
+*.log
+logs/
+screenshots/
+traces/
+data/
+cart*.json
+shopee-response*.json
