@@ -2,28 +2,35 @@
 
 ## Supported versions
 
-Security fixes are applied to the **latest release** on the default branch when practical.
+Security fixes are applied to the latest code on the default branch when practical.
 
 ## Reporting a vulnerability
 
-Please **do not** open a public GitHub issue for undisclosed security problems.
+Please **do not** open a public GitHub issue for undisclosed security problems. Use GitHub private vulnerability reporting when available, or contact the maintainer privately.
 
-1. Use [GitHub private vulnerability reporting](https://github.com/bintangtimurlangit/shopee-mcp/security/advisories/new) if it is enabled for this repository, **or**
-2. Contact the maintainers via a private channel (e.g. email on your GitHub profile).
+Include a short description, impact, safe reproduction steps, and affected versions/dependencies when known.
 
-Include:
+## Credential and account-data handling
 
-- A short description of the issue and its impact
-- Steps to reproduce (or a proof-of-concept), if safe to share
-- Affected versions or dependency versions, if known
+This is a **local MCP server** that drives a logged-in Shopee browser profile. Treat that profile as a credential:
 
-We aim to acknowledge reports within a few days and coordinate disclosure after a fix is available.
+- The authenticated browser session lives only on the user's machine under `~/.shopee-mcp/chrome-profile` by default (configurable with `SHOPEE_PROFILE_DIR`).
+- Never commit, upload, attach, or publish the browser profile, cookies, storage state, HAR files, screenshots containing account data, or raw authenticated Shopee responses.
+- `.env`, browser/storage state, HAR files, logs, screenshots, traces, cart JSON dumps, and similar debug artifacts are gitignored.
+- Debug logging must not print cookies, authorization headers, session tokens, browser storage, addresses, payment information, or complete authenticated account responses.
+- Tests and fixtures must use synthetic data rather than a real user's cart/account data.
 
-## Scope and credential handling
+## Cart-write scope
 
-This is a **local MCP server** that reads **public** Shopee product data through a **logged-in browser session** (Shopee blocks anonymous requests). Be aware:
+The upstream project is discovery-only. This fork adds optional buyer-cart features:
 
-- Your **session lives on your machine** under `~/.shopee-mcp/chrome-profile` (configurable via `SHOPEE_PROFILE_DIR`). Treat that directory like a password. It is never transmitted anywhere by this server, and the repo **gitignores** local profile/state.
-- The server is **read-only** — it performs product search and detail lookups only; there are no seller or account actions.
+- `get_cart` reads the current cart.
+- `add_to_cart` can add an item only when the local operator explicitly sets `SHOPEE_CART_WRITE_ENABLED=true`.
+- Cart writes are performed through Shopee's own logged-in product-page UI and verified against the resulting cart API response.
+- This project intentionally does **not** implement checkout, order placement, address changes, payment-method changes, or payment submission.
 
-Issues in **Shopee's services**, **CloakBrowser**, or **upstream** dependencies (e.g. `@modelcontextprotocol/sdk`, `playwright`) should be reported to those projects when appropriate.
+Because `add_to_cart` changes account state, only connect this MCP server to AI clients you trust and keep the write flag disabled when it is not needed.
+
+## Upstream/dependency issues
+
+Issues in Shopee's services, CloakBrowser, or dependencies such as `@modelcontextprotocol/sdk` and Playwright should be reported to those projects when appropriate.
