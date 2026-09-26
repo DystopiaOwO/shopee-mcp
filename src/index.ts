@@ -8,6 +8,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { registerSearchTools } from './tools/search.js';
 import { registerProductTools } from './tools/product.js';
 import { registerStatusTools } from './tools/status.js';
+import { registerCartTools } from './tools/cart.js';
 import { closeContext } from './browser/session.js';
 
 // Read the version from package.json at runtime so it can't drift from the
@@ -28,12 +29,13 @@ async function main() {
   registerSearchTools(server);
   registerProductTools(server);
   registerStatusTools(server);
+  registerCartTools(server);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
   if (process.env.DEBUG === 'true') {
-    process.stderr.write('[shopee-mcp] Server started via stdio (browser-backed discovery)\n');
+    process.stderr.write('[shopee-mcp] Server started via stdio (browser-backed discovery/cart)\n');
   }
 }
 
