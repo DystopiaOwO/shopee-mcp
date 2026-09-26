@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { Locator, Page } from 'playwright';
 import { z } from 'zod';
 import { shopeeCapture, shopeeUrl } from '../api/client.js';
 import type { PdpItem, PdpProductPrice } from '../api/types.js';
@@ -20,10 +21,13 @@ interface ProductModel {
   modelid?: number;
   model_id?: number;
   name?: string;
-  stock?: number;
-  price?: number;
-  price_before_discount?: number;
+  stock?: number | null;
+  price?: number | null;
+  price_before_discount?: number | null;
   tier_index?: number[];
+  extinfo?: {
+    tier_index?: number[];
+  };
   status?: number;
 }
 
@@ -60,13 +64,17 @@ function modelId(model: ProductModel): number | undefined {
   return model.modelid ?? model.model_id;
 }
 
+function modelTierIndexes(model: ProductModel): number[] {
+  return model.extinfo?.tier_index ?? model.tier_index ?? [];
+}
+
 function optionLabel(option: TierOption | string | undefined): string | undefined {
   if (typeof option === 'string') return option;
   return option?.option ?? option?.name;
 }
 
-function formatPrice(raw: number | undefined, currency: string): string {
-  if (raw === undefined) return 'N/A';
+function formatPrice(raw: number | null | undefined, currency: string): string {
+  if (raw === undefined || raw === null) return 'N/A';
   const amount = raw / 100000;
   if (currency === 'TWD') return `NT$${Math.round(amount).toLocaleString('zh-TW')}`;
   if (currency === 'IDR') return `Rp${Math.round(amount).toLocaleString('id-ID')}`;
@@ -95,14 +103,16 @@ function variantSummary(item: PdpItemWithVariants): string {
       const options = (tier.options ?? [])
         .map((option) => optionLabel(option))
         .filter((label): label is string => Boolean(label));
-      return options.length ? `  ${tierIndex + 1}. ${tier.name || 'Option'}: ${options.join(' / ')}` : '';
+      return options.length
+        ? `  ${tierIndex + 1}. ${tier.name || 'Option'}: ${options.join(' / ')}`
+        : '';
     })
     .filter(Boolean);
 
   const modelLines = models.map((model) => {
     const id = modelId(model);
-    const stock = model.stock ?? 0;
-    const indexes = model.tier_index ?? [];
+    const stock = model.stock ?? 'unknown';
+    const indexes = modelTierIndexes(model);
     const chosen = indexes
       .map((optionIndex, tierIndex) => optionLabel(tiers[tierIndex]?.options?.[optionIndex]))
       .filter((label): label is string => Boolean(label));
@@ -121,10 +131,7 @@ function variantSummary(item: PdpItemWithVariants): string {
     .join('\n');
 }
 
-async function setQuantitySafely(
-  page: Parameters<Parameters<typeof withPage>[0]>[0],
-  quantity: number,
-): Promise<void> {
+async function setQuantitySafely(page: Page, quantity: number): Promise<void> {
   if (quantity === 1) return;
 
   const preferred = page.locator(
@@ -159,18 +166,26 @@ async function setQuantitySafely(
 }
 
 async function selectModelOptions(
-  page: Parameters<Parameters<typeof withPage>[0]>[0],
+  page: Page,
   item: PdpItemWithVariants,
   model: ProductModel,
 ): Promise<void> {
   const tiers = item.tier_variations ?? [];
-  const indexes = model.tier_index ?? [];
+  const indexes = modelTierIndexes(model);
   if (indexes.length === 0) return;
 
   for (let tierIndex = 0; tierIndex < indexes.length; tierIndex += 1) {
     const label = optionLabel(tiers[tierIndex]?.options?.[indexes[tierIndex]]);
     if (!label) {
       throw new Error(`Could not resolve variant option ${tierIndex + 1} for model ${modelId(model)}.`);
+    }
+
+    // Shopee commonly exposes variant names as the button's aria-label. Prefer
+    // the accessible name because it survives many CSS-class changes.
+    const accessibleButton = page.getByRole('button', { name: label, exact: true }).first();
+    if ((await accessibleButton.count()) > 0 && (await accessibleButton.isVisible())) {
+      await accessibleButton.click();
+      continue;
     }
 
     const productVariation = page.locator('button.product-variation').filter({ hasText: label }).first();
@@ -189,7 +204,7 @@ async function selectModelOptions(
   }
 }
 
-async function findAddToCartButton(page: Parameters<Parameters<typeof withPage>[0]>[0]) {
+async function findAddToCartButton(page: Page): Promise<Locator> {
   const labeled = page
     .getByRole('button', {
       name: /加入購物車|加入购物车|add to cart|masukkan keranjang|thêm vào giỏ hàng/i,
@@ -236,7 +251,9 @@ export function registerCartTools(server: McpServer): void {
           return { content: [{ type: 'text', text: '❌ Could not read product variant data.' }] };
         }
 
-        const text = [`📦 **${item.title}**`, '', variantSummary(item), '', `🔗 ${productUrl}`].join('\n');
+        const text = [`📦 **${item.title}**`, '', variantSummary(item), '', `🔗 ${productUrl}`].join(
+          '\n',
+        );
         return { content: [{ type: 'text', text }] };
       }),
   );
