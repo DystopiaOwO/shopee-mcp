@@ -7,6 +7,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build & checks
@@ -16,6 +19,8 @@ jobs:
         node-version: [20, 22, 24]
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'push' && github.ref_name || github.sha }}
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
@@ -23,11 +28,22 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run format
+      - name: Commit Prettier output on feature-branch pushes
+        if: github.event_name == 'push' && matrix.node-version == 22
+        shell: bash
+        run: |
+          if git diff --quiet -- README.md src/tools/cart.ts; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md src/tools/cart.ts
+          git commit -m "style: apply prettier"
+          git push origin HEAD:${GITHUB_REF_NAME}
       - run: npm run typecheck
       - run: npm run build
       - run: npm run test:unit
 
-# NOTE: the feature branch temporarily runs `npm run format` so typecheck/build/tests
-# can run to completion while cart-tool code is being stabilized. Restore
-# `npm run format:check` before merging.
+# The formatter self-commit step is temporary for this feature branch. Remove it
+# and restore `npm run format:check` before merging.
 # `npm test` is a LIVE smoke test that needs a logged-in browser session and display.
