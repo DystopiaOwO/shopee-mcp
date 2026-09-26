@@ -177,7 +177,9 @@ async function selectModelOptions(
   for (let tierIndex = 0; tierIndex < indexes.length; tierIndex += 1) {
     const label = optionLabel(tiers[tierIndex]?.options?.[indexes[tierIndex]]);
     if (!label) {
-      throw new Error(`Could not resolve variant option ${tierIndex + 1} for model ${modelId(model)}.`);
+      throw new Error(
+        `Could not resolve variant option ${tierIndex + 1} for model ${modelId(model)}.`,
+      );
     }
 
     // Shopee commonly exposes variant names as the button's aria-label. Prefer
@@ -188,7 +190,10 @@ async function selectModelOptions(
       continue;
     }
 
-    const productVariation = page.locator('button.product-variation').filter({ hasText: label }).first();
+    const productVariation = page
+      .locator('button.product-variation')
+      .filter({ hasText: label })
+      .first();
     if ((await productVariation.count()) > 0 && (await productVariation.isVisible())) {
       await productVariation.click();
       continue;
@@ -218,7 +223,9 @@ async function findAddToCartButton(page: Page): Promise<Locator> {
   const tinted = page.locator('button.btn-tinted, button[class*="btn-tinted"]').first();
   if ((await tinted.count()) > 0 && (await tinted.isVisible())) return tinted;
 
-  throw new Error('Could not find the Add to Cart button safely on the current Shopee product page.');
+  throw new Error(
+    'Could not find the Add to Cart button safely on the current Shopee product page.',
+  );
 }
 
 export function registerCartTools(server: McpServer): void {
@@ -251,9 +258,13 @@ export function registerCartTools(server: McpServer): void {
           return { content: [{ type: 'text', text: '❌ Could not read product variant data.' }] };
         }
 
-        const text = [`📦 **${item.title}**`, '', variantSummary(item), '', `🔗 ${productUrl}`].join(
-          '\n',
-        );
+        const text = [
+          `📦 **${item.title}**`,
+          '',
+          variantSummary(item),
+          '',
+          `🔗 ${productUrl}`,
+        ].join('\n');
         return { content: [{ type: 'text', text }] };
       }),
   );
@@ -285,9 +296,9 @@ export function registerCartTools(server: McpServer): void {
               let node: HTMLElement | null = link;
               let row: HTMLElement | null = null;
               for (let depth = 0; depth < 8 && node; depth += 1) {
-                const numericInput = Array.from(node.querySelectorAll<HTMLInputElement>('input')).find(
-                  (input) => /^\d+$/.test(input.value),
-                );
+                const numericInput = Array.from(
+                  node.querySelectorAll<HTMLInputElement>('input'),
+                ).find((input) => /^\d+$/.test(input.value));
                 if (numericInput) {
                   row = node;
                   break;
@@ -296,9 +307,9 @@ export function registerCartTools(server: McpServer): void {
               }
               if (!row) continue;
 
-              const quantityInput = Array.from(row.querySelectorAll<HTMLInputElement>('input')).find(
-                (input) => /^\d+$/.test(input.value),
-              );
+              const quantityInput = Array.from(
+                row.querySelectorAll<HTMLInputElement>('input'),
+              ).find((input) => /^\d+$/.test(input.value));
               const visibleText = (row.innerText || row.textContent || '')
                 .replace(/\s+/g, ' ')
                 .trim()

@@ -6,14 +6,14 @@ The project is **unofficial** and is not affiliated with Shopee or Sea Limited.
 
 ## What this fork adds
 
-| Tool | Purpose | Account side effect |
-| --- | --- | --- |
-| `search_products` | Search Shopee products | No |
-| `get_product_detail` | Read product details | No |
-| `get_product_variants` | List exact variant/model IDs, stock and prices | No |
-| `get_cart` | Read the logged-in shopping cart | No |
-| `add_to_cart` | Add a selected product/model to the cart | **Yes, opt-in** |
-| `check_login_status` | Check whether the saved Shopee session is logged in | No |
+| Tool                   | Purpose                                             | Account side effect |
+| ---------------------- | --------------------------------------------------- | ------------------- |
+| `search_products`      | Search Shopee products                              | No                  |
+| `get_product_detail`   | Read product details                                | No                  |
+| `get_product_variants` | List exact variant/model IDs, stock and prices      | No                  |
+| `get_cart`             | Read the logged-in shopping cart                    | No                  |
+| `add_to_cart`          | Add a selected product/model to the cart            | **Yes, opt-in**     |
+| `check_login_status`   | Check whether the saved Shopee session is logged in | No                  |
 
 `add_to_cart` is intentionally limited to the shopping cart. This fork does **not** implement checkout, order placement, delivery-address changes, payment-method changes, or payment submission.
 
@@ -106,16 +106,16 @@ The repository's `.gitignore` includes common session/debug artifacts, but that 
 
 ## Environment variables
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `SHOPEE_DOMAIN` | `shopee.co.id` | Regional Shopee domain; use `shopee.tw` for Taiwan |
-| `SHOPEE_LOCALE` | region-derived | Browser locale |
-| `SHOPEE_TIMEZONE` | region-derived | Browser timezone |
-| `SHOPEE_PROFILE_DIR` | `~/.shopee-mcp/chrome-profile` | Persistent logged-in browser profile |
-| `SHOPEE_HEADLESS` | `false` | Keep false unless experimenting |
-| `SHOPEE_CART_WRITE_ENABLED` | `false` | Enables `add_to_cart` when explicitly set to `true` |
-| `CACHE_TTL_MS` | `30000` | In-memory product cache lifetime |
-| `DEBUG` | `false` | Diagnostic startup logging; must not contain account secrets |
+| Variable                    | Default                        | Purpose                                                      |
+| --------------------------- | ------------------------------ | ------------------------------------------------------------ |
+| `SHOPEE_DOMAIN`             | `shopee.co.id`                 | Regional Shopee domain; use `shopee.tw` for Taiwan           |
+| `SHOPEE_LOCALE`             | region-derived                 | Browser locale                                               |
+| `SHOPEE_TIMEZONE`           | region-derived                 | Browser timezone                                             |
+| `SHOPEE_PROFILE_DIR`        | `~/.shopee-mcp/chrome-profile` | Persistent logged-in browser profile                         |
+| `SHOPEE_HEADLESS`           | `false`                        | Keep false unless experimenting                              |
+| `SHOPEE_CART_WRITE_ENABLED` | `false`                        | Enables `add_to_cart` when explicitly set to `true`          |
+| `CACHE_TTL_MS`              | `30000`                        | In-memory product cache lifetime                             |
+| `DEBUG`                     | `false`                        | Diagnostic startup logging; must not contain account secrets |
 
 ## Development
 
