@@ -17,14 +17,14 @@ This fork extends the upstream Shopee MCP server with buyer-side cart support wh
 
 ## Documents
 
-| Document | Description |
-| --- | --- |
-| [Root README](../README.md) | Quick start, Taiwan setup, tool overview, and safety boundaries |
+| Document                            | Description                                                                         |
+| ----------------------------------- | ----------------------------------------------------------------------------------- |
+| [Root README](../README.md)         | Quick start, Taiwan setup, tool overview, and safety boundaries                     |
 | [Configuration](./CONFIGURATION.md) | Environment variables, Taiwan defaults, MCP client configuration, cart-write switch |
-| [Development](./DEVELOPMENT.md) | Project layout, scripts, validation, browser architecture, and live testing |
-| [Releases](./RELEASES.md) | Upstream versioning/release notes plus fork-specific publishing guidance |
-| [Security](../SECURITY.md) | Credential handling, authenticated browser data, and cart-write scope |
-| [Changelog](../CHANGELOG.md) | Version history and fork changes |
+| [Development](./DEVELOPMENT.md)     | Project layout, scripts, validation, browser architecture, and live testing         |
+| [Releases](./RELEASES.md)           | Upstream versioning/release notes plus fork-specific publishing guidance            |
+| [Security](../SECURITY.md)          | Credential handling, authenticated browser data, and cart-write scope               |
+| [Changelog](../CHANGELOG.md)        | Version history and fork changes                                                    |
 
 ## Traditional Chinese
 

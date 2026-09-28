@@ -4,19 +4,19 @@
 
 ## 常用指令
 
-| 指令 | 說明 |
-| --- | --- |
-| `npm ci` | 依 lockfile 安裝固定版本依賴 |
-| `npm run login` | 開啟瀏覽器並使用 persistent profile 登入蝦皮 |
-| `npm run build` | 將 TypeScript 編譯到 `build/` |
-| `npm run dev` | `tsx watch src/index.ts` 開發模式 |
-| `npm run start` | 啟動已編譯的 MCP Server |
-| `npm run lint` | ESLint |
-| `npm run format` | 用 Prettier 格式化 |
-| `npm run format:check` | 只檢查 Prettier 格式、不修改檔案 |
-| `npm run typecheck` | TypeScript strict typecheck，不輸出檔案 |
-| `npm run test:unit` | 離線單元測試，不需要登入或顯示器 |
-| `npm test` | Live smoke test，需要登入與圖形顯示環境 |
+| 指令                   | 說明                                         |
+| ---------------------- | -------------------------------------------- |
+| `npm ci`               | 依 lockfile 安裝固定版本依賴                 |
+| `npm run login`        | 開啟瀏覽器並使用 persistent profile 登入蝦皮 |
+| `npm run build`        | 將 TypeScript 編譯到 `build/`                |
+| `npm run dev`          | `tsx watch src/index.ts` 開發模式            |
+| `npm run start`        | 啟動已編譯的 MCP Server                      |
+| `npm run lint`         | ESLint                                       |
+| `npm run format`       | 用 Prettier 格式化                           |
+| `npm run format:check` | 只檢查 Prettier 格式、不修改檔案             |
+| `npm run typecheck`    | TypeScript strict typecheck，不輸出檔案      |
+| `npm run test:unit`    | 離線單元測試，不需要登入或顯示器             |
+| `npm test`             | Live smoke test，需要登入與圖形顯示環境      |
 
 CI 會在 Node.js 20、22、24 上執行 lint、Prettier、typecheck、build 與 offline unit tests。
 

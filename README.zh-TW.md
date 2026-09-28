@@ -14,14 +14,14 @@
 
 ## 可用工具
 
-| Tool | 功能 | 是否修改帳號狀態 |
-| --- | --- | --- |
-| `search_products` | 搜尋蝦皮商品 | 否 |
-| `get_product_detail` | 讀取商品詳細資料 | 否 |
-| `get_product_variants` | 讀取精確規格、modelId、庫存與價格 | 否 |
-| `get_cart` | 讀取目前登入帳號的購物車 | 否 |
-| `add_to_cart` | 加入指定商品 / 規格到購物車 | **是，需明確開啟** |
-| `check_login_status` | 確認目前瀏覽器 session 是否已登入蝦皮 | 否 |
+| Tool                   | 功能                                  | 是否修改帳號狀態   |
+| ---------------------- | ------------------------------------- | ------------------ |
+| `search_products`      | 搜尋蝦皮商品                          | 否                 |
+| `get_product_detail`   | 讀取商品詳細資料                      | 否                 |
+| `get_product_variants` | 讀取精確規格、modelId、庫存與價格     | 否                 |
+| `get_cart`             | 讀取目前登入帳號的購物車              | 否                 |
+| `add_to_cart`          | 加入指定商品 / 規格到購物車           | **是，需明確開啟** |
+| `check_login_status`   | 確認目前瀏覽器 session 是否已登入蝦皮 | 否                 |
 
 `add_to_cart` 僅允許修改購物車。本專案刻意**不實作**：
 

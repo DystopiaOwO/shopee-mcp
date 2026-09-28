@@ -10,16 +10,16 @@ For a quick start, see the [root README](../README.md#quick-start).
 
 Set these in `.env` when developing from a checkout, or in your MCP client's environment configuration.
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `SHOPEE_DOMAIN` | `shopee.co.id` | Regional Shopee domain. Use `shopee.tw` for Taiwan. |
-| `SHOPEE_LOCALE` | region-derived | Browser locale. Taiwan defaults to `zh-TW`. |
-| `SHOPEE_TIMEZONE` | region-derived | Browser timezone. Taiwan defaults to `Asia/Taipei`. |
-| `SHOPEE_PROFILE_DIR` | `~/.shopee-mcp/chrome-profile` | Persistent logged-in browser profile. Treat it like a credential. |
-| `SHOPEE_HEADLESS` | `false` | Keep `false` unless experimenting; Shopee can detect headless automation. |
-| `SHOPEE_CART_WRITE_ENABLED` | `false` | Enables `add_to_cart` only when explicitly set to `true`. |
-| `CACHE_TTL_MS` | `30000` | In-memory cache lifetime in milliseconds. |
-| `DEBUG` | `false` | Diagnostic logging. Must never contain account credentials or private account data. |
+| Variable                    | Default                        | Description                                                                         |
+| --------------------------- | ------------------------------ | ----------------------------------------------------------------------------------- |
+| `SHOPEE_DOMAIN`             | `shopee.co.id`                 | Regional Shopee domain. Use `shopee.tw` for Taiwan.                                 |
+| `SHOPEE_LOCALE`             | region-derived                 | Browser locale. Taiwan defaults to `zh-TW`.                                         |
+| `SHOPEE_TIMEZONE`           | region-derived                 | Browser timezone. Taiwan defaults to `Asia/Taipei`.                                 |
+| `SHOPEE_PROFILE_DIR`        | `~/.shopee-mcp/chrome-profile` | Persistent logged-in browser profile. Treat it like a credential.                   |
+| `SHOPEE_HEADLESS`           | `false`                        | Keep `false` unless experimenting; Shopee can detect headless automation.           |
+| `SHOPEE_CART_WRITE_ENABLED` | `false`                        | Enables `add_to_cart` only when explicitly set to `true`.                           |
+| `CACHE_TTL_MS`              | `30000`                        | In-memory cache lifetime in milliseconds.                                           |
+| `DEBUG`                     | `false`                        | Diagnostic logging. Must never contain account credentials or private account data. |
 
 ### Recommended Taiwan `.env`
 

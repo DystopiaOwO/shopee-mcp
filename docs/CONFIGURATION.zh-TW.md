@@ -10,16 +10,16 @@
 
 從 source checkout 開發時可寫在 `.env`；也可以由 MCP client 的環境設定傳入。
 
-| 變數 | 預設值 | 說明 |
-| --- | --- | --- |
-| `SHOPEE_DOMAIN` | `shopee.co.id` | 蝦皮區域網域；台灣請設為 `shopee.tw` |
-| `SHOPEE_LOCALE` | 依區域自動判斷 | 瀏覽器 locale；台灣預設 `zh-TW` |
-| `SHOPEE_TIMEZONE` | 依區域自動判斷 | 瀏覽器 timezone；台灣預設 `Asia/Taipei` |
-| `SHOPEE_PROFILE_DIR` | `~/.shopee-mcp/chrome-profile` | 登入後 persistent browser profile，應視為帳號憑證 |
-| `SHOPEE_HEADLESS` | `false` | 建議維持 `false`，蝦皮可能偵測 headless 自動化 |
-| `SHOPEE_CART_WRITE_ENABLED` | `false` | 只有明確設成 `true` 才允許 `add_to_cart` 修改購物車 |
-| `CACHE_TTL_MS` | `30000` | 記憶體快取時間，單位毫秒 |
-| `DEBUG` | `false` | 除錯輸出；不得包含帳號憑證或私人帳號資料 |
+| 變數                        | 預設值                         | 說明                                                |
+| --------------------------- | ------------------------------ | --------------------------------------------------- |
+| `SHOPEE_DOMAIN`             | `shopee.co.id`                 | 蝦皮區域網域；台灣請設為 `shopee.tw`                |
+| `SHOPEE_LOCALE`             | 依區域自動判斷                 | 瀏覽器 locale；台灣預設 `zh-TW`                     |
+| `SHOPEE_TIMEZONE`           | 依區域自動判斷                 | 瀏覽器 timezone；台灣預設 `Asia/Taipei`             |
+| `SHOPEE_PROFILE_DIR`        | `~/.shopee-mcp/chrome-profile` | 登入後 persistent browser profile，應視為帳號憑證   |
+| `SHOPEE_HEADLESS`           | `false`                        | 建議維持 `false`，蝦皮可能偵測 headless 自動化      |
+| `SHOPEE_CART_WRITE_ENABLED` | `false`                        | 只有明確設成 `true` 才允許 `add_to_cart` 修改購物車 |
+| `CACHE_TTL_MS`              | `30000`                        | 記憶體快取時間，單位毫秒                            |
+| `DEBUG`                     | `false`                        | 除錯輸出；不得包含帳號憑證或私人帳號資料            |
 
 ## 台灣站建議設定
 

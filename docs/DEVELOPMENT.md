@@ -4,19 +4,19 @@
 
 ## Scripts
 
-| Command | Description |
-| --- | --- |
-| `npm ci` | Install exact dependencies from the lockfile |
-| `npm run login` | Open a browser window and log into Shopee using the persistent profile |
-| `npm run build` | Compile TypeScript to `build/` |
-| `npm run dev` | Watch mode with `tsx watch src/index.ts` |
-| `npm run start` | Run the compiled MCP server |
-| `npm run lint` | Run ESLint |
-| `npm run format` | Apply Prettier formatting |
-| `npm run format:check` | Verify Prettier formatting without modifying files |
-| `npm run typecheck` | Strict TypeScript checking with no emit |
-| `npm run test:unit` | Offline unit tests; no login/display required |
-| `npm test` | Live smoke test; requires a login and graphical display |
+| Command                | Description                                                            |
+| ---------------------- | ---------------------------------------------------------------------- |
+| `npm ci`               | Install exact dependencies from the lockfile                           |
+| `npm run login`        | Open a browser window and log into Shopee using the persistent profile |
+| `npm run build`        | Compile TypeScript to `build/`                                         |
+| `npm run dev`          | Watch mode with `tsx watch src/index.ts`                               |
+| `npm run start`        | Run the compiled MCP server                                            |
+| `npm run lint`         | Run ESLint                                                             |
+| `npm run format`       | Apply Prettier formatting                                              |
+| `npm run format:check` | Verify Prettier formatting without modifying files                     |
+| `npm run typecheck`    | Strict TypeScript checking with no emit                                |
+| `npm run test:unit`    | Offline unit tests; no login/display required                          |
+| `npm test`             | Live smoke test; requires a login and graphical display                |
 
 CI validates Node.js 20, 22, and 24 with lint, Prettier check, typecheck, build, and offline unit tests.
 
