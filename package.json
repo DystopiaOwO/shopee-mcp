@@ -1,7 +1,7 @@
 {
   "name": "@bintangtimurlangit/shopee-mcp",
   "version": "0.2.0",
-  "description": "An MCP server for exploring Shopee — product search and prices via an authenticated browser session. Discovery only, no seller features.",
+  "description": "Fork of shopee-mcp with product discovery, cart reading, and opt-in buyer Add to Cart via an authenticated browser session.",
   "author": "bintangtimurlangit",
   "license": "MIT",
   "type": "module",
@@ -10,12 +10,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bintangtimurlangit/shopee-mcp.git"
+    "url": "git+https://github.com/DystopiaOwO/shopee-mcp.git"
   },
   "bugs": {
-    "url": "https://github.com/bintangtimurlangit/shopee-mcp/issues"
+    "url": "https://github.com/DystopiaOwO/shopee-mcp/issues"
   },
-  "homepage": "https://github.com/bintangtimurlangit/shopee-mcp#readme",
+  "homepage": "https://github.com/DystopiaOwO/shopee-mcp#readme",
   "bin": {
     "shopee-mcp": "build/index.js",
     "shopee-mcp-login": "build/login.js"
@@ -55,11 +55,10 @@
     "mcp",
     "model-context-protocol",
     "shopee",
-    "indonesia",
     "ecommerce",
     "marketplace",
     "product-search",
-    "discovery"
+    "shopping-cart"
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

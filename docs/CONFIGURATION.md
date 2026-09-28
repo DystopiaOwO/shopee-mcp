@@ -1,43 +1,85 @@
 # Configuration
 
-For installing the package or cloning the repo, see **[Installation](../README.md#installation)** in the README.
+[English](./CONFIGURATION.md) · [繁體中文](./CONFIGURATION.zh-TW.md)
 
-> **Login required.** Shopee blocks anonymous requests, so this server reads public data through a saved browser session. Run `npm run login` once before use. There are no API keys — authentication is the browser session under `~/.shopee-mcp/chrome-profile`.
+For a quick start, see the [root README](../README.md#quick-start).
 
----
+> **Login required.** Shopee blocks anonymous requests, so this server uses a saved browser session. Run `npm run login` once before use. There are no Shopee API keys; authentication is the persistent browser profile under `~/.shopee-mcp/chrome-profile` by default.
 
 ## Environment variables
 
-All optional. Set them in your MCP client's **`env`** block, or copy `.env.example` to `.env` when developing from a checkout.
+Set these in `.env` when developing from a checkout, or in your MCP client's environment configuration.
 
-| Variable             | Default                        | Description                          |
-| -------------------- | ------------------------------ | ------------------------------------ |
-| `SHOPEE_DOMAIN`      | `shopee.co.id`                 | Regional Shopee domain.              |
-| `SHOPEE_PROFILE_DIR` | `~/.shopee-mcp/chrome-profile` | Where the saved login lives.         |
-| `SHOPEE_HEADLESS`    | `false`                        | Keep `false` — headless is detected. |
-| `CACHE_TTL_MS`       | `30000`                        | In-memory cache lifetime.            |
-| `DEBUG`              | `false`                        | Log startup/debug info to stderr.    |
+| Variable                    | Default                        | Description                                                                         |
+| --------------------------- | ------------------------------ | ----------------------------------------------------------------------------------- |
+| `SHOPEE_DOMAIN`             | `shopee.co.id`                 | Regional Shopee domain. Use `shopee.tw` for Taiwan.                                 |
+| `SHOPEE_LOCALE`             | region-derived                 | Browser locale. Taiwan defaults to `zh-TW`.                                         |
+| `SHOPEE_TIMEZONE`           | region-derived                 | Browser timezone. Taiwan defaults to `Asia/Taipei`.                                 |
+| `SHOPEE_PROFILE_DIR`        | `~/.shopee-mcp/chrome-profile` | Persistent logged-in browser profile. Treat it like a credential.                   |
+| `SHOPEE_HEADLESS`           | `false`                        | Keep `false` unless experimenting; Shopee can detect headless automation.           |
+| `SHOPEE_CART_WRITE_ENABLED` | `false`                        | Enables `add_to_cart` only when explicitly set to `true`.                           |
+| `CACHE_TTL_MS`              | `30000`                        | In-memory cache lifetime in milliseconds.                                           |
+| `DEBUG`                     | `false`                        | Diagnostic logging. Must never contain account credentials or private account data. |
 
----
+### Recommended Taiwan `.env`
 
-## MCP configuration (all clients)
+```env
+SHOPEE_DOMAIN=shopee.tw
+SHOPEE_HEADLESS=false
+SHOPEE_CART_WRITE_ENABLED=false
+DEBUG=false
+```
 
-This server uses **stdio** and launches a **headed** browser, so it needs a display. On a headless machine, wrap the command in `xvfb-run`.
+Start with cart writes disabled. After `check_login_status`, product lookup, variant lookup, and `get_cart` are working, enable Add to Cart only if needed:
 
-### With a virtual display (servers)
+```env
+SHOPEE_CART_WRITE_ENABLED=true
+```
+
+Restart the MCP server after changing environment variables.
+
+## Browser profile
+
+The default authenticated profile is:
+
+```text
+~/.shopee-mcp/chrome-profile
+```
+
+It can contain authentication cookies and session state. Never commit, upload, sync publicly, attach to an issue, or paste its contents into an AI conversation.
+
+You can override the location:
+
+```env
+SHOPEE_PROFILE_DIR=/path/to/private/shopee-profile
+```
+
+## MCP configuration
+
+This server uses **stdio** and launches a **headed** browser, so the process needs access to a graphical display.
+
+### Windows desktop
+
+Build the project first:
+
+```powershell
+npm run build
+```
+
+Then point the MCP client at the absolute Windows path to `build/index.js`:
 
 ```json
 {
   "mcpServers": {
     "shopee": {
-      "command": "xvfb-run",
-      "args": ["-a", "node", "/absolute/path/to/shopee-mcp/build/index.js"]
+      "command": "node",
+      "args": ["C:\\Users\\you\\source\\shopee-mcp\\build\\index.js"]
     }
   }
 }
 ```
 
-### With a real display (desktop / WSLg)
+### macOS/Linux desktop
 
 ```json
 {
@@ -50,24 +92,39 @@ This server uses **stdio** and launches a **headed** browser, so it needs a disp
 }
 ```
 
-Use an **absolute** path to `build/index.js`.
+### Linux server with a virtual display
 
----
+```json
+{
+  "mcpServers": {
+    "shopee": {
+      "command": "xvfb-run",
+      "args": ["-a", "node", "/absolute/path/to/shopee-mcp/build/index.js"]
+    }
+  }
+}
+```
 
-## Claude Code
+## Client notes
 
-- **CLI:** `claude mcp add shopee -- xvfb-run -a node /absolute/path/to/shopee-mcp/build/index.js` (drop `xvfb-run -a` on a machine with a display).
-- **Project scope:** `.mcp.json` in the repo root. **User scope:** `~/.claude.json`.
-- **Restart** or reload so the new server is registered.
+### Claude Code
 
-## Claude Desktop
+Use a stdio MCP configuration pointing to this fork's compiled `build/index.js`. Restart or reload the MCP configuration after rebuilding.
 
-- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
-- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Linux:** `~/.config/Claude/claude_desktop_config.json`
+### Claude Desktop
 
-Use the same **`mcpServers`** JSON as above.
+Typical configuration file locations:
 
-## Other editors
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Linux: `~/.config/Claude/claude_desktop_config.json`
 
-Cursor, Zed, Windsurf, and any other **stdio MCP host** use the same pattern: a server whose command is `node` (or `xvfb-run … node`) plus the path to `build/index.js`.
+### Cursor, Zed, Windsurf, Codex, and other MCP hosts
+
+Use the same stdio pattern: `node` plus the absolute path to this fork's `build/index.js`.
+
+## Cart-write safety
+
+`get_cart` is read-only. `add_to_cart` changes the logged-in account's shopping cart and therefore requires `SHOPEE_CART_WRITE_ENABLED=true`.
+
+This project intentionally does not expose checkout, order placement, address changes, payment-method changes, or payment submission.

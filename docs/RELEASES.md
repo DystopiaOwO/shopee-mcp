@@ -1,46 +1,55 @@
 # Releases and versioning
 
-This project uses **Semantic Versioning** ([SemVer 2.0](https://semver.org/)) for the **npm package**. The canonical version string is **`package.json`** → `version`.
+This repository is a fork of `bintangtimurlangit/shopee-mcp`.
 
-Commit messages follow **[Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)** (`feat:`, `fix:`, `docs:`, `chore:`, …). That pairs with SemVer: `fix` → PATCH, `feat` → MINOR, breaking changes → MAJOR.
+The upstream project publishes the npm package `@bintangtimurlangit/shopee-mcp`. **That npm package does not include this fork's cart tools.** Until this fork intentionally publishes its own package/release, install and run it from source as documented in the root README.
 
-## Version format
+## Versioning
 
-`MAJOR.MINOR.PATCH` — e.g. `0.1.0`, `1.2.3`.
+The project follows Semantic Versioning principles:
 
-- **MAJOR** — Breaking changes (removed/renamed tools, incompatible env or behavior).
-- **MINOR** — Backward-compatible features (new tools, new optional config).
-- **PATCH** — Bug fixes and safe corrections that do not change the public contract.
+`MAJOR.MINOR.PATCH`
 
-## npm dist-tags
+- **MAJOR** — breaking tool/configuration behavior;
+- **MINOR** — backward-compatible tools or optional configuration;
+- **PATCH** — bug fixes and safe corrections.
 
-| Tag      | Typical use                                                          |
-| -------- | -------------------------------------------------------------------- |
-| `latest` | Default stable install: `npm install @bintangtimurlangit/shopee-mcp` |
-| `beta`   | Optional prereleases: `npm publish --tag beta` with `X.Y.Z-beta.N`   |
+Commit messages should follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/), for example:
 
-Scoped packages use **`"publishConfig": { "access": "public" }`**.
+```text
+feat(cart): add buyer cart tools
+fix(cart): support Taiwan cart DOM
+docs: add Traditional Chinese documentation
+```
 
-## Publishing (maintainers)
+## Fork release policy
 
-Releases are **automated** by the [`release` workflow](../.github/workflows/release.yml): pushing a `vX.Y.Z` tag runs typecheck + build and publishes to npm (with [provenance](https://docs.npmjs.com/generating-provenance-statements)), then creates a GitHub release.
+For this fork:
 
-**One-time setup:** add an npm **automation token** as the repo secret **`NPM_TOKEN`**. Without it, the workflow still builds but skips publish.
-
-**To cut a release:**
-
-1. Bump **`version`** in **`package.json`** per SemVer.
-2. Update **`CHANGELOG.md`**: move items from **`[Unreleased]`** into **`[X.Y.Z] - YYYY-MM-DD`**.
-3. Commit with Conventional Commits, e.g. `chore(release): v0.1.1`.
-4. Tag and push:
+1. Keep `CHANGELOG.md` updated under `[Unreleased]` while features are being stabilized.
+2. Run the full CI checks before merging/releasing:
 
    ```bash
-   git tag v0.1.1
-   git push origin main --tags
+   npm run lint
+   npm run format:check
+   npm run typecheck
+   npm run build
+   npm run test:unit
    ```
 
-5. The workflow publishes to npm and opens the GitHub release.
+3. For browser/cart changes, also run a live regional smoke test.
+4. Do not reuse the upstream npm package name unless ownership/publishing rights explicitly allow it.
+5. If this fork is published later, use a distinct package identity and update `package.json`, README install instructions, release workflow, and changelog links together.
 
-## Git tags
+## Upstream releases
 
-Tag stable releases as **`vX.Y.Z`**; prereleases **`vX.Y.Z-beta.N`**.
+The upstream project uses SemVer, git tags such as `v0.2.0`, and automated npm publishing. Refer to the upstream repository for its authoritative npm release process.
+
+## Tags
+
+If this fork starts producing releases, use standard tags:
+
+- stable: `vX.Y.Z`
+- prerelease: `vX.Y.Z-beta.N`
+
+Do not tag a fork release until documentation, package identity, release automation, and live cart behavior have all been reviewed.

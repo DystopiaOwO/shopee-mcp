@@ -12,6 +12,12 @@ export const BASE_URL = `https://${DOMAIN}`;
 export const PROFILE_DIR =
   process.env.SHOPEE_PROFILE_DIR || path.join(os.homedir(), '.shopee-mcp', 'chrome-profile');
 
+// Allow regional overrides without hard-coding a single Shopee market.
+const DEFAULT_LOCALE = DOMAIN.endsWith('.tw') ? 'zh-TW' : 'id-ID';
+const DEFAULT_TIMEZONE = DOMAIN.endsWith('.tw') ? 'Asia/Taipei' : 'Asia/Jakarta';
+const LOCALE = process.env.SHOPEE_LOCALE || DEFAULT_LOCALE;
+const TIMEZONE = process.env.SHOPEE_TIMEZONE || DEFAULT_TIMEZONE;
+
 // Shopee detects headless even with fingerprint patches, so we run HEADED by
 // default (needs a display: WSLg, a desktop X server, or xvfb for servers).
 // Set SHOPEE_HEADLESS=true only to experiment.
@@ -41,8 +47,8 @@ async function createContext(headless: boolean): Promise<BrowserContext> {
     userDataDir: PROFILE_DIR,
     headless,
     userAgent: USER_AGENT,
-    locale: 'id-ID',
-    timezone: 'Asia/Jakarta',
+    locale: LOCALE,
+    timezone: TIMEZONE,
     viewport: { width: 1366, height: 768 },
     humanize: true,
     args: ['--no-sandbox', '--disable-dev-shm-usage'],
@@ -78,6 +84,15 @@ function withLock<T>(fn: () => Promise<T>): Promise<T> {
   return run;
 }
 
+/**
+ * Run a browser operation against the shared logged-in page while holding the
+ * same navigation lock used by captureJson. This is intended for user-initiated
+ * UI actions such as adding an item to the cart.
+ */
+export async function withPage<T>(fn: (page: Page) => Promise<T>): Promise<T> {
+  return withLock(async () => fn(await getPage()));
+}
+
 export interface CaptureOptions {
   /** Substring the target /api/v4 response URL must contain. */
   apiMatch: string;
@@ -93,9 +108,7 @@ export interface CaptureOptions {
  */
 export async function captureJson<T>(pageUrl: string, opts: CaptureOptions): Promise<T> {
   const timeoutMs = opts.timeoutMs ?? 30000;
-  return withLock(async () => {
-    const page = await getPage();
-
+  return withPage(async (page) => {
     const matched = page.waitForResponse(
       (r: Response) => r.url().includes('/api/v4/') && r.url().includes(opts.apiMatch),
       { timeout: timeoutMs },
@@ -111,8 +124,7 @@ export async function captureJson<T>(pageUrl: string, opts: CaptureOptions): Pro
 
 /** Warm the session once (loads Shopee so the anti-fraud SDK initialises). */
 export async function warm(): Promise<void> {
-  await withLock(async () => {
-    const page = await getPage();
+  await withPage(async (page) => {
     if (!page.url().includes(DOMAIN)) {
       debug('Warming session on Shopee homepage…');
       await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded', timeout: 45000 });
