@@ -1,5 +1,7 @@
 # shopee-mcp
 
+[English](./README.md) · [繁體中文](./README.zh-TW.md)
+
 [![npm](https://img.shields.io/npm/v/@bintangtimurlangit/shopee-mcp?style=flat-square)](https://www.npmjs.com/package/@bintangtimurlangit/shopee-mcp)
 [![license](https://img.shields.io/github/license/bintangtimurlangit/shopee-mcp?style=flat-square)](./LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/bintangtimurlangit/shopee-mcp/ci.yml?branch=main&style=flat-square)](https://github.com/bintangtimurlangit/shopee-mcp/actions)
