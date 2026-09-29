@@ -4,19 +4,19 @@
 
 ## 常用指令
 
-| 指令 | 說明 |
-| --- | --- |
-| `npm install` | 安裝依賴，並下載 CloakBrowser binary |
-| `npm run login` | 開啟瀏覽器並使用 persistent profile 登入 Shopee |
-| `npm run build` | 將 TypeScript 編譯到 `build/` |
-| `npm run dev` | `tsx watch src/index.ts` 開發模式 |
-| `npm run start` | 啟動已編譯 Server：`node build/index.js` |
-| `npm run lint` | ESLint |
-| `npm run format` | Prettier 格式化 |
-| `npm run format:check` | 檢查格式、不修改檔案 |
-| `npm run typecheck` | `tsc --noEmit` strict typecheck |
-| `npm run test:unit` | 離線單元測試，不需要登入與顯示器 |
-| `npm test` | Live smoke test，需要登入 session 與圖形顯示環境 |
+| 指令                   | 說明                                             |
+| ---------------------- | ------------------------------------------------ |
+| `npm install`          | 安裝依賴，並下載 CloakBrowser binary             |
+| `npm run login`        | 開啟瀏覽器並使用 persistent profile 登入 Shopee  |
+| `npm run build`        | 將 TypeScript 編譯到 `build/`                    |
+| `npm run dev`          | `tsx watch src/index.ts` 開發模式                |
+| `npm run start`        | 啟動已編譯 Server：`node build/index.js`         |
+| `npm run lint`         | ESLint                                           |
+| `npm run format`       | Prettier 格式化                                  |
+| `npm run format:check` | 檢查格式、不修改檔案                             |
+| `npm run typecheck`    | `tsc --noEmit` strict typecheck                  |
+| `npm run test:unit`    | 離線單元測試，不需要登入與顯示器                 |
+| `npm test`             | Live smoke test，需要登入 session 與圖形顯示環境 |
 
 CI 會在 Node.js 20、22、24 上執行 lint、Prettier、typecheck、build 與 offline unit tests。
 

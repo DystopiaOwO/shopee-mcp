@@ -6,14 +6,14 @@
 
 ## 文件
 
-| 文件 | 說明 |
-| --- | --- |
-| [繁中 README](../README.zh-TW.md) | 功能總覽、安裝、帳號模式、台灣站設定與安全邊界 |
+| 文件                                 | 說明                                                                |
+| ------------------------------------ | ------------------------------------------------------------------- |
+| [繁中 README](../README.zh-TW.md)    | 功能總覽、安裝、帳號模式、台灣站設定與安全邊界                      |
 | [設定指南](./CONFIGURATION.zh-TW.md) | `.env`、區域 / locale / timezone、timeout、Windows / Linux MCP 設定 |
-| [開發指南](./DEVELOPMENT.zh-TW.md) | 專案結構、測試、CI、account tools、台灣站 smoke test |
-| [安全性說明](../SECURITY.zh-TW.md) | browser profile、帳號工具、個資與公開 repo 安全原則 |
-| [Changelog](../CHANGELOG.md) | 上游版本與功能變更紀錄 |
-| [Releases](./RELEASES.md) | SemVer、tag 與 npm release 流程（英文） |
+| [開發指南](./DEVELOPMENT.zh-TW.md)   | 專案結構、測試、CI、account tools、台灣站 smoke test                |
+| [安全性說明](../SECURITY.zh-TW.md)   | browser profile、帳號工具、個資與公開 repo 安全原則                 |
+| [Changelog](../CHANGELOG.md)         | 上游版本與功能變更紀錄                                              |
+| [Releases](./RELEASES.md)            | SemVer、tag 與 npm release 流程（英文）                             |
 
 ## v0.3.0 主要能力
 

@@ -12,16 +12,16 @@
 
 ## 公開資料工具
 
-| Tool | 功能 |
-| --- | --- |
-| `search_products` | 商品搜尋、排序、價格區間、最低評分、賣家地區、Shopee Mall 篩選與分頁 |
-| `get_product_detail` | 商品價格、折扣、評分、銷量、庫存、分類、規格、運費、免運門檻、預估到貨與賣家摘要 |
+| Tool                   | 功能                                                                               |
+| ---------------------- | ---------------------------------------------------------------------------------- |
+| `search_products`      | 商品搜尋、排序、價格區間、最低評分、賣家地區、Shopee Mall 篩選與分頁               |
+| `get_product_detail`   | 商品價格、折扣、評分、銷量、庫存、分類、規格、運費、免運門檻、預估到貨與賣家摘要   |
 | `get_product_variants` | 商品所有規格、精確 `modelId`、各規格價格與可用狀態；可用 `includeStock` 查精確庫存 |
-| `get_product_reviews` | 星等統計與買家評論，可依星等、文字或圖片篩選 |
-| `get_shop_info` | 賣場資訊、徽章、評分、商品數、粉絲、回覆率、加入時間、最後上線等 |
-| `get_shop_products` | 指定賣場商品列表，可依熱門、新品、銷量、價格排序 |
-| `get_flash_sale` | 目前限時特賣時段、後續時段與特價商品 |
-| `check_login_status` | 檢查目前 persistent browser session 是否已登入 |
+| `get_product_reviews`  | 星等統計與買家評論，可依星等、文字或圖片篩選                                       |
+| `get_shop_info`        | 賣場資訊、徽章、評分、商品數、粉絲、回覆率、加入時間、最後上線等                   |
+| `get_shop_products`    | 指定賣場商品列表，可依熱門、新品、銷量、價格排序                                   |
+| `get_flash_sale`       | 目前限時特賣時段、後續時段與特價商品                                               |
+| `check_login_status`   | 檢查目前 persistent browser session 是否已登入                                     |
 
 這些預設工具都是唯讀操作。
 
@@ -39,25 +39,25 @@ SHOPEE_ACCOUNT_TOOLS=off
 
 ### 帳號唯讀工具
 
-| Tool | 功能 |
-| --- | --- |
-| `get_orders` | 依全部、待出貨、待收貨、已完成、已取消等頁籤查看訂單 |
-| `get_order_detail` | 訂單商品、付款金額、付款管道、時間軸、物流商、追蹤號碼與物流事件；不回傳地址或電話 |
-| `get_my_vouchers` | 目前帳號優惠券、適用範圍、低消、到期時間與代碼 |
-| `get_coins` | 蝦幣餘額與近期紀錄 |
-| `get_notifications` | 訂單、促銷與蝦皮通知 |
-| `get_cart` | 依賣場分組的購物車商品、規格、數量、價格與 `modelId` |
-| `get_shop_vouchers` | 指定賣場可領優惠券與已領取狀態 |
+| Tool                | 功能                                                                               |
+| ------------------- | ---------------------------------------------------------------------------------- |
+| `get_orders`        | 依全部、待出貨、待收貨、已完成、已取消等頁籤查看訂單                               |
+| `get_order_detail`  | 訂單商品、付款金額、付款管道、時間軸、物流商、追蹤號碼與物流事件；不回傳地址或電話 |
+| `get_my_vouchers`   | 目前帳號優惠券、適用範圍、低消、到期時間與代碼                                     |
+| `get_coins`         | 蝦幣餘額與近期紀錄                                                                 |
+| `get_notifications` | 訂單、促銷與蝦皮通知                                                               |
+| `get_cart`          | 依賣場分組的購物車商品、規格、數量、價格與 `modelId`                               |
+| `get_shop_vouchers` | 指定賣場可領優惠券與已領取狀態                                                     |
 
 ### 會修改帳號狀態的工具
 
-| Tool | 功能 |
-| --- | --- |
-| `add_to_cart` | 將指定商品與精確 `modelId` 加入購物車，數量 1–20 |
-| `update_cart_item` | 修改購物車數量；`quantity: 0` 代表移除 |
-| `like_product` | 商品按讚／取消按讚 |
-| `follow_shop` | 追蹤／取消追蹤賣場 |
-| `claim_shop_voucher` | 領取商店優惠券；成功領取後通常無法復原 |
+| Tool                 | 功能                                             |
+| -------------------- | ------------------------------------------------ |
+| `add_to_cart`        | 將指定商品與精確 `modelId` 加入購物車，數量 1–20 |
+| `update_cart_item`   | 修改購物車數量；`quantity: 0` 代表移除           |
+| `like_product`       | 商品按讚／取消按讚                               |
+| `follow_shop`        | 追蹤／取消追蹤賣場                               |
+| `claim_shop_voucher` | 領取商店優惠券；成功領取後通常無法復原           |
 
 ### 帳號工具的安全邊界
 
@@ -194,16 +194,16 @@ Linux server 沒有 display 時，可使用：
 
 ## 主要環境變數
 
-| 變數 | 預設值 | 說明 |
-| --- | --- | --- |
-| `SHOPEE_DOMAIN` | `shopee.co.id` | 區域網域；台灣使用 `shopee.tw` |
-| `SHOPEE_LOCALE` | 依網域自動判斷 | Browser locale |
-| `SHOPEE_TIMEZONE` | 依網域自動判斷 | Browser timezone |
-| `SHOPEE_PROFILE_DIR` | `~/.shopee-mcp/chrome-profile` | Persistent 登入 profile |
-| `SHOPEE_HEADLESS` | `false` | 建議維持 `false` |
-| `SHOPEE_ACCOUNT_TOOLS` | `auto` | `auto`：登入後開帳號工具；`off`：永遠唯讀 |
-| `CACHE_TTL_MS` | `30000` | 記憶體快取 TTL |
-| `DEBUG` | `false` | 啟動／除錯 log |
+| 變數                   | 預設值                         | 說明                                      |
+| ---------------------- | ------------------------------ | ----------------------------------------- |
+| `SHOPEE_DOMAIN`        | `shopee.co.id`                 | 區域網域；台灣使用 `shopee.tw`            |
+| `SHOPEE_LOCALE`        | 依網域自動判斷                 | Browser locale                            |
+| `SHOPEE_TIMEZONE`      | 依網域自動判斷                 | Browser timezone                          |
+| `SHOPEE_PROFILE_DIR`   | `~/.shopee-mcp/chrome-profile` | Persistent 登入 profile                   |
+| `SHOPEE_HEADLESS`      | `false`                        | 建議維持 `false`                          |
+| `SHOPEE_ACCOUNT_TOOLS` | `auto`                         | `auto`：登入後開帳號工具；`off`：永遠唯讀 |
+| `CACHE_TTL_MS`         | `30000`                        | 記憶體快取 TTL                            |
+| `DEBUG`                | `false`                        | 啟動／除錯 log                            |
 
 詳細設定與 timeout 請看 [設定指南](./docs/CONFIGURATION.zh-TW.md)。
 

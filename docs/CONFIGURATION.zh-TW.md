@@ -10,28 +10,28 @@
 
 可寫在 source checkout 的 `.env`，也可由 MCP client 的 `env` 傳入。
 
-| 變數 | 預設值 | 說明 |
-| --- | --- | --- |
-| `SHOPEE_DOMAIN` | `shopee.co.id` | Shopee 區域網域；台灣使用 `shopee.tw` |
-| `SHOPEE_LOCALE` | 依網域自動判斷 | Browser locale override |
-| `SHOPEE_TIMEZONE` | 依網域自動判斷 | Browser timezone override |
-| `SHOPEE_PROFILE_DIR` | `~/.shopee-mcp/chrome-profile` | 保存登入 session 的 persistent profile |
-| `SHOPEE_HEADLESS` | `false` | 建議維持 `false`；Shopee 可能偵測 headless |
-| `SHOPEE_ACCOUNT_TOOLS` | `auto` | `auto`：登入後提供帳號工具；`off`：永遠唯讀 |
-| `CACHE_TTL_MS` | `30000` | 記憶體快取 TTL（毫秒） |
-| `DEBUG` | `false` | 啟動／除錯 log |
+| 變數                   | 預設值                         | 說明                                        |
+| ---------------------- | ------------------------------ | ------------------------------------------- |
+| `SHOPEE_DOMAIN`        | `shopee.co.id`                 | Shopee 區域網域；台灣使用 `shopee.tw`       |
+| `SHOPEE_LOCALE`        | 依網域自動判斷                 | Browser locale override                     |
+| `SHOPEE_TIMEZONE`      | 依網域自動判斷                 | Browser timezone override                   |
+| `SHOPEE_PROFILE_DIR`   | `~/.shopee-mcp/chrome-profile` | 保存登入 session 的 persistent profile      |
+| `SHOPEE_HEADLESS`      | `false`                        | 建議維持 `false`；Shopee 可能偵測 headless  |
+| `SHOPEE_ACCOUNT_TOOLS` | `auto`                         | `auto`：登入後提供帳號工具；`off`：永遠唯讀 |
+| `CACHE_TTL_MS`         | `30000`                        | 記憶體快取 TTL（毫秒）                      |
+| `DEBUG`                | `false`                        | 啟動／除錯 log                              |
 
 ## 區域、語系、時區與貨幣
 
 Shopee 會依地區調整前端，因此 browser locale / timezone 應與網域一致。專案會依 `SHOPEE_DOMAIN` 自動選擇：
 
-| 網域後綴 | Locale | Timezone | Currency |
-| --- | --- | --- | --- |
-| `.id` | `id-ID` | `Asia/Jakarta` | `IDR` |
-| `.my` | `en-MY` | `Asia/Kuala_Lumpur` | `MYR` |
-| `.sg` | `en-SG` | `Asia/Singapore` | `SGD` |
-| `.tw` | `zh-TW` | `Asia/Taipei` | `TWD` |
-| 其他 | `id-ID` | `Asia/Jakarta` | `IDR` |
+| 網域後綴 | Locale  | Timezone            | Currency |
+| -------- | ------- | ------------------- | -------- |
+| `.id`    | `id-ID` | `Asia/Jakarta`      | `IDR`    |
+| `.my`    | `en-MY` | `Asia/Kuala_Lumpur` | `MYR`    |
+| `.sg`    | `en-SG` | `Asia/Singapore`    | `SGD`    |
+| `.tw`    | `zh-TW` | `Asia/Taipei`       | `TWD`    |
+| 其他     | `id-ID` | `Asia/Jakarta`      | `IDR`    |
 
 台灣站建議：
 
@@ -76,18 +76,18 @@ SHOPEE_PROFILE_DIR=/path/to/private/shopee-profile
 
 上游在 2026 年 9 月量測的典型時間：
 
-| Tool | 典型時間 | 備註 |
-| --- | --- | --- |
-| `check_login_status` | 約 1–2 秒 | Cookie check，不導航頁面 |
-| `search_products` | 約 5–30 秒 | 部分區域搜尋 request 會延遲 |
-| `get_product_detail` | 約 4 秒 | 一次頁面載入 |
-| `get_product_variants` | 約 4 秒 | 一次頁面載入 |
-| `get_product_variants` + `includeStock` | 約 50 秒 | 每個 variant 可能額外 round trip |
-| `get_product_reviews` | 約 6–12 秒 | 需要捲動與切換篩選 |
-| `get_shop_info` / `get_shop_products` | 約 2–5 秒 | 一次頁面載入 |
-| `get_flash_sale` | 約 3–30 秒 | 依載入商品數而定 |
-| 帳號讀取工具 | 約 2–10 秒 | 依頁面與捲動需求而定 |
-| 帳號動作工具 | 約 4–14 秒 | 導航後逐步確認 UI 操作結果 |
+| Tool                                    | 典型時間   | 備註                             |
+| --------------------------------------- | ---------- | -------------------------------- |
+| `check_login_status`                    | 約 1–2 秒  | Cookie check，不導航頁面         |
+| `search_products`                       | 約 5–30 秒 | 部分區域搜尋 request 會延遲      |
+| `get_product_detail`                    | 約 4 秒    | 一次頁面載入                     |
+| `get_product_variants`                  | 約 4 秒    | 一次頁面載入                     |
+| `get_product_variants` + `includeStock` | 約 50 秒   | 每個 variant 可能額外 round trip |
+| `get_product_reviews`                   | 約 6–12 秒 | 需要捲動與切換篩選               |
+| `get_shop_info` / `get_shop_products`   | 約 2–5 秒  | 一次頁面載入                     |
+| `get_flash_sale`                        | 約 3–30 秒 | 依載入商品數而定                 |
+| 帳號讀取工具                            | 約 2–10 秒 | 依頁面與捲動需求而定             |
+| 帳號動作工具                            | 約 4–14 秒 | 導航後逐步確認 UI 操作結果       |
 
 `get_product_variants(includeStock=true)` 會逐規格查精確庫存，可能接近 MCP client 常見的 60 秒 timeout。若需要完整掃描大量 variant，建議將 client timeout 提高到約 70 秒以上。
 
