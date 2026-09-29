@@ -10,15 +10,16 @@ For installing the package or cloning the repo, see **[Installation](../README.m
 
 All optional. Set them in your MCP client's **`env`** block, or copy `.env.example` to `.env` when developing from a checkout.
 
-| Variable             | Default                        | Description                          |
-| -------------------- | ------------------------------ | ------------------------------------ |
-| `SHOPEE_DOMAIN`      | `shopee.co.id`                 | Regional Shopee domain.              |
-| `SHOPEE_LOCALE`      | _derived from domain_          | Browser locale override.             |
-| `SHOPEE_TIMEZONE`    | _derived from domain_          | Browser timezone override.           |
-| `SHOPEE_PROFILE_DIR` | `~/.shopee-mcp/chrome-profile` | Where the saved login lives.         |
-| `SHOPEE_HEADLESS`    | `false`                        | Keep `false` — headless is detected. |
-| `CACHE_TTL_MS`       | `30000`                        | In-memory cache lifetime.            |
-| `DEBUG`              | `false`                        | Log startup/debug info to stderr.    |
+| Variable               | Default                        | Description                                              |
+| ---------------------- | ------------------------------ | -------------------------------------------------------- |
+| `SHOPEE_DOMAIN`        | `shopee.co.id`                 | Regional Shopee domain.                                  |
+| `SHOPEE_LOCALE`        | _derived from domain_          | Browser locale override.                                 |
+| `SHOPEE_TIMEZONE`      | _derived from domain_          | Browser timezone override.                               |
+| `SHOPEE_PROFILE_DIR`   | `~/.shopee-mcp/chrome-profile` | Where the saved login lives.                             |
+| `SHOPEE_HEADLESS`      | `false`                        | Keep `false` — headless is detected.                     |
+| `SHOPEE_ACCOUNT_TOOLS` | `auto`                         | `auto`: account tools while logged in; `off`: read-only. |
+| `CACHE_TTL_MS`         | `30000`                        | In-memory cache lifetime.                                |
+| `DEBUG`                | `false`                        | Log startup/debug info to stderr.                        |
 
 ### Locale and timezone
 
@@ -42,13 +43,20 @@ Set `SHOPEE_LOCALE` or `SHOPEE_TIMEZONE` to override either independently.
 
 The tool reference lives in the [root README](../README.md#tools). What matters for configuration is that **every call drives a real browser**, so responses take tens of seconds — far longer than a typical MCP tool. Most clients default to a **60-second** request timeout, and these calls sit close to it.
 
-| Tool                                    | Typical | Notes                                                      |
-| --------------------------------------- | ------- | ---------------------------------------------------------- |
-| `check_login_status`                    | ~1s     | Cookie check; no navigation. Cheapest way to verify setup. |
-| `search_products`                       | ~30s    | Shopee fires its search request ~28s into the page load.   |
-| `get_product_detail`                    | ~30s    | One page load.                                             |
-| `get_product_variants`                  | ~30s    | One page load.                                             |
-| `get_product_variants` + `includeStock` | ~50s    | Adds a round trip per variant (see below).                 |
+Measured on `shopee.co.id` (Sept 2026); Shopee serves each region differently — on `shopee.com.my` the search page was observed firing its request only ~28s into the load.
+
+| Tool                                    | Typical | Notes                                                       |
+| --------------------------------------- | ------- | ----------------------------------------------------------- |
+| `check_login_status`                    | ~1-2s   | Cookie check; no navigation. Cheapest way to verify setup.  |
+| `search_products`                       | ~5-30s  | One page load; slowest where Shopee delays the search call. |
+| `get_product_detail`                    | ~4s     | One page load.                                              |
+| `get_product_variants`                  | ~4s     | One page load.                                              |
+| `get_product_variants` + `includeStock` | ~50s    | Adds a round trip per variant (see below).                  |
+| `get_product_reviews`                   | ~6-12s  | Scrolls to the reviews, then one click per filter/page.     |
+| `get_shop_info` / `get_shop_products`   | ~2-5s   | One page load.                                              |
+| `get_flash_sale`                        | ~3-30s  | Scrolls until `limit` deals have loaded.                    |
+| Account reads (`get_orders`, …)         | ~2-10s  | One page load; `get_orders` scrolls for more than 5 orders. |
+| Account actions (`add_to_cart`, …)      | ~4-14s  | Page load, then clicks confirmed one response at a time.    |
 
 `get_product_variants` reports exact per-variant stock only when `includeStock` is set, because Shopee reveals those counts one variant at a time — each costs a separate round trip. The lookup stops on a time budget so it stays inside a 60-second timeout, reporting availability for any variants it did not reach and stating the coverage in its output. Raising your client's timeout above ~70s lets it cover more variants per call; it is off by default so the common path stays fast.
 

@@ -5,29 +5,74 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/bintangtimurlangit/shopee-mcp/ci.yml?branch=main&style=flat-square)](https://github.com/bintangtimurlangit/shopee-mcp/actions)
 [![GitHub Repo](https://img.shields.io/badge/GitHub-shopee--mcp-24292f?style=flat-square&logo=github)](https://github.com/bintangtimurlangit/shopee-mcp)
 
-An MCP server for **exploring Shopee** — product search and prices — from any MCP client (Claude Desktop, Claude Code, etc.). Discovery only: no seller features.
+An MCP server for **exploring Shopee** — product search, prices, reviews, shops and flash sales — from any MCP client (Claude Desktop, Claude Code, etc.). Discovery only: no seller features.
 
-> **Login required, read-only.** Shopee blocks anonymous requests, so this **unofficial** server reads public data through your own logged-in browser session (see [Why a browser?](#why-a-browser)). It performs no seller or account actions.
+> **Login required, read-only.** Shopee blocks anonymous requests, so this **unofficial** server reads public data through your own logged-in browser session (see [Why a browser?](#why-a-browser)). Signed out it is read-only; signed in it also offers [experimental account tools](#account-mode-experimental) for your orders, cart, vouchers, likes and follows.
 
 **Full reference:** [Documentation](./docs/README.md) · **Changelog:** [CHANGELOG.md](./CHANGELOG.md) · **Versioning & releases:** [docs/RELEASES.md](./docs/RELEASES.md)
 
 ## Tools
 
-| Tool                 | What it returns                                                                                                                             |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `search_products`    | Keyword search with sorting & pagination — names, prices, sold counts, ratings, seller location, product IDs, URLs.                         |
-| `get_product_detail` | One product — price & discount, brand, condition, category, rating, **review count**, **sold count**, stock, location, description.         |
-| `check_login_status` | Whether the saved browser session is currently logged into Shopee — check this before the tools above instead of waiting on a slow failure. |
+| Tool                   | What it returns                                                                                                                                            |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `search_products`      | Keyword search with sorting, **filters** (price range, min rating, seller location, Shopee Mall only) & pagination — prices, sold counts, IDs, URLs.       |
+| `get_product_detail`   | One product — price & discount, rating, sold count, stock, category, **specs**, **shipping** (fee, free-shipping threshold, ETA), **seller**, description. |
+| `get_product_variants` | Every variant of a listing — model IDs, variant names, per-variant prices and availability. Opt into `includeStock` for exact counts.                      |
+| `get_product_reviews`  | Rating summary (star breakdown, with-media/comment counts) and pages of buyer reviews — filter by star rating, comments, or media.                         |
+| `get_shop_info`        | A seller's profile by shop ID or username — badges, rating, products, followers, chat response rate/time, join date, last active.                          |
+| `get_shop_products`    | One shop's catalogue, with sorting (popular, newest, top sales, price) & pagination.                                                                       |
+| `get_flash_sale`       | The current Flash Sale — session window, upcoming sessions, and deals with flash vs. original price and how much stock is claimed.                         |
+| `check_login_status`   | Whether the saved browser session is logged into Shopee — check this first instead of waiting on a slow failure.                                           |
 
 ### Tool annotations
 
-Per the [MCP annotations spec](https://modelcontextprotocol.io/) — all tools are read-only, with no side effects.
+Per the [MCP annotations spec](https://modelcontextprotocol.io/) — every default tool is read-only, with no side effects.
 
-| Tool                 | Read-only | Idempotent | Destructive |
-| -------------------- | :-------: | :--------: | :---------: |
-| `search_products`    |     ✓     |     ✓      |      –      |
-| `get_product_detail` |     ✓     |     ✓      |      –      |
-| `check_login_status` |     ✓     |     ✓      |      –      |
+| Tool                   | Read-only | Idempotent | Destructive |
+| ---------------------- | :-------: | :--------: | :---------: |
+| `search_products`      |     ✓     |     ✓      |      –      |
+| `get_product_detail`   |     ✓     |     ✓      |      –      |
+| `get_product_variants` |     ✓     |     ✓      |      –      |
+| `get_product_reviews`  |     ✓     |     ✓      |      –      |
+| `get_shop_info`        |     ✓     |     ✓      |      –      |
+| `get_shop_products`    |     ✓     |     ✓      |      –      |
+| `get_flash_sale`       |     ✓     |     –      |      –      |
+| `check_login_status`   |     ✓     |     ✓      |      –      |
+
+## Account mode (experimental)
+
+When the saved session is **logged in**, the server also offers tools that work on **your own account**. When it isn't, you get the read-only tools above and the account tools are hidden. The server checks the login in the background at startup and whenever `check_login_status` runs or a request reports a lapsed session, and tells your MCP client to refresh its tool list (`notifications/tools/list_changed`). Set `SHOPEE_ACCOUNT_TOOLS=off` to stay read-only even while logged in.
+
+**Read your account**
+
+| Tool                | What it returns                                                                                    |
+| ------------------- | -------------------------------------------------------------------------------------------------- |
+| `get_orders`        | Your orders by tab (all, to ship, to receive, completed, cancelled) — status, shop, items, totals. |
+| `get_order_detail`  | One order — items, total paid, payment channel, timeline, courier, tracking number & events.       |
+| `get_my_vouchers`   | Vouchers in your wallet — benefit, scope, minimum spend, expiry, code.                             |
+| `get_coins`         | Shopee Coins balance and recent coin transactions.                                                 |
+| `get_notifications` | Order updates, promotions, or Shopee updates.                                                      |
+| `get_cart`          | Your cart grouped by shop — items, variants, quantities, prices, model IDs.                        |
+| `get_shop_vouchers` | A shop's claimable vouchers, and which ones you've already claimed.                                |
+
+**Act on your account** — these modify your Shopee account:
+
+| Tool                 | What it does                                                                |
+| -------------------- | --------------------------------------------------------------------------- |
+| `add_to_cart`        | Adds a product — the exact variant via `modelId` — in a quantity of 1-20.   |
+| `update_cart_item`   | Changes a cart line's quantity, or removes it with `quantity: 0`.           |
+| `like_product`       | Likes or unlikes a product.                                                 |
+| `follow_shop`        | Follows or unfollows a shop.                                                |
+| `claim_shop_voucher` | Claims one of a shop's vouchers into your wallet (a claim can't be undone). |
+
+How they stay safe:
+
+- **Nothing checks out, pays, or touches addresses, payment methods, passwords, or chat.** Order detail omits your address and phone number.
+- Every action clicks **Shopee's own button** on the real page (never a hand-crafted request), then reports only what Shopee's response confirmed.
+- They check the current state first — liking a liked product, or claiming a claimed voucher, changes nothing.
+- They refuse rather than guess: a multi-variant listing needs an explicit `modelId`, `add_to_cart` verifies the quantity box shows exactly what you asked for and never falls back to "Buy Now", and `claim_shop_voucher` only clicks when the page's voucher buttons line up with the shop's voucher list.
+
+They drive Shopee's UI, so a site redesign can break them — hence _experimental_. The cart tools build on [@DystopiaOwO](https://github.com/DystopiaOwO)'s fork.
 
 ## Why a browser?
 
@@ -92,13 +137,18 @@ On a machine with a real display, drop `xvfb-run`: `"command": "shopee-mcp"`, `"
 
 All optional — see `.env.example`. Copy to `.env` to override.
 
-| Variable             | Default                        | Purpose                              |
-| -------------------- | ------------------------------ | ------------------------------------ |
-| `SHOPEE_DOMAIN`      | `shopee.co.id`                 | Regional Shopee domain.              |
-| `SHOPEE_PROFILE_DIR` | `~/.shopee-mcp/chrome-profile` | Where the saved login lives.         |
-| `SHOPEE_HEADLESS`    | `false`                        | Keep `false` — headless is detected. |
-| `CACHE_TTL_MS`       | `30000`                        | In-memory cache lifetime.            |
-| `DEBUG`              | `false`                        | Log startup/debug info to stderr.    |
+| Variable               | Default                        | Purpose                                                         |
+| ---------------------- | ------------------------------ | --------------------------------------------------------------- |
+| `SHOPEE_DOMAIN`        | `shopee.co.id`                 | Regional Shopee domain (`.co.id`, `.com.my`, `.sg`, `.tw`).     |
+| `SHOPEE_LOCALE`        | _derived from domain_          | Browser locale override.                                        |
+| `SHOPEE_TIMEZONE`      | _derived from domain_          | Browser timezone override.                                      |
+| `SHOPEE_PROFILE_DIR`   | `~/.shopee-mcp/chrome-profile` | Where the saved login lives.                                    |
+| `SHOPEE_HEADLESS`      | `false`                        | Keep `false` — headless is detected.                            |
+| `SHOPEE_ACCOUNT_TOOLS` | `auto`                         | `auto`: account tools while logged in. `off`: always read-only. |
+| `CACHE_TTL_MS`         | `30000`                        | In-memory cache lifetime.                                       |
+| `DEBUG`                | `false`                        | Log startup/debug info to stderr.                               |
+
+Tool timings and client timeouts: see [docs/CONFIGURATION.md](./docs/CONFIGURATION.md#tools-and-request-timeouts).
 
 ## Development
 
@@ -125,9 +175,10 @@ More detail: **[docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)**.
 
 ## Caveats
 
-- **Login required.** No session → tools return a friendly "run `npm run login`" prompt.
+- **Login required.** Shopee blocks anonymous browsing: with no session, `get_shop_info` still works and every other tool returns a friendly "run `npm run login`" prompt.
 - **Anti-bot is a moving target.** The free CloakBrowser binary can go stale as Shopee updates detection; CloakBrowser Pro ships newer patches.
 - Respect Shopee's Terms of Service. This is for personal market exploration, not scraping at scale.
+- **Regions.** Indonesia is the most tested; Malaysia, Singapore and Taiwan get the matching locale, timezone and currency automatically.
 
 ## Contributing & security
 
@@ -143,6 +194,6 @@ More detail: **[docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)**.
 
 This is an **unofficial** project. It is **not affiliated with, authorized, maintained, sponsored, or endorsed by Shopee or Sea Limited**.
 
-It works by driving a real logged-in browser session against Shopee's web app, which can change without notice — a tool may break when Shopee updates its site or anti-bot behavior. It reads only publicly available product data and performs no account actions.
+It works by driving a real logged-in browser session against Shopee's web app, which can change without notice — a tool may break when Shopee updates its site or anti-bot behavior. Signed out it reads only public data; signed in, its experimental account tools read your own orders, cart, vouchers and notifications, and can change your cart, likes, follows and claimed vouchers — never checkout, payment, or account settings.
 
 You are responsible for using this software in compliance with [Shopee's Terms of Service](https://shopee.co.id/docs/terms) and applicable law. Use reasonable request volumes. All product names, logos, and brands are property of their respective owners.

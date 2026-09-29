@@ -1,6 +1,6 @@
 # shopee-mcp documentation
 
-**shopee-mcp** is a [Model Context Protocol](https://modelcontextprotocol.io/) server for **public discovery** on Shopee — product search, detail, and variants through a logged-in browser session — over **stdio**, for Claude Code, Claude Desktop, Cursor, and other MCP hosts. Discovery only; no seller features.
+**shopee-mcp** is a [Model Context Protocol](https://modelcontextprotocol.io/) server for **public discovery** on Shopee — product search, detail, variants, reviews, shops and flash sales — plus, when logged in, experimental account tools — through a logged-in browser session — over **stdio**, for Claude Code, Claude Desktop, Cursor, and other MCP hosts. Discovery only; no seller features.
 
 | Document                            | Description                                                                                                    |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------- |
