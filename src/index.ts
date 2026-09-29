@@ -9,6 +9,13 @@ import { registerSearchTools } from './tools/search.js';
 import { registerProductTools } from './tools/product.js';
 import { registerVariantTools } from './tools/variants.js';
 import { registerStatusTools } from './tools/status.js';
+import { registerReviewTools } from './tools/reviews.js';
+import { registerShopTools } from './tools/shop.js';
+import { registerFlashSaleTools } from './tools/flashsale.js';
+import { registerCartTools } from './tools/cart.js';
+import { registerAccountTools } from './tools/account.js';
+import { registerActionTools } from './tools/actions.js';
+import { accountToolsSetting, initAccountMode, refreshAccountMode } from './account-mode.js';
 import { closeContext, DEBUG } from './browser/session.js';
 
 // Read the version from package.json at runtime so it can't drift from the
@@ -29,10 +36,24 @@ async function main() {
   registerSearchTools(server);
   registerProductTools(server);
   registerVariantTools(server);
+  registerReviewTools(server);
+  registerShopTools(server);
+  registerFlashSaleTools(server);
   registerStatusTools(server);
+  // Experimental account tools (reads of the user's own data, and the only
+  // tools that modify the account). Registered hidden; account mode shows them
+  // once the session is confirmed logged in (see src/account-mode.ts).
+  initAccountMode(server);
+  registerAccountTools(server);
+  registerCartTools(server);
+  registerActionTools(server);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
+
+  // Check the session in the background so a logged-in user gets the account
+  // tools without calling anything first; clients are notified via list_changed.
+  if (accountToolsSetting() === 'auto') void refreshAccountMode();
 
   if (DEBUG) {
     process.stderr.write('[shopee-mcp] Server started via stdio (browser-backed discovery)\n');

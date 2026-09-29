@@ -93,3 +93,12 @@ export async function shopeeCapture<T extends { error?: number; error_msg?: stri
 export function shopeeUrl(pathAndQuery: string): string {
   return `${BASE_URL}${pathAndQuery.startsWith('/') ? '' : '/'}${pathAndQuery}`;
 }
+
+/**
+ * Fail fast when signed out. shopeeCapture does this itself; tools that drive
+ * the page through captureAll call it first so a signed-out user gets the login
+ * prompt immediately instead of after a full scroll-and-wait budget.
+ */
+export async function requireLogin(checkLogin: LoginCheckFn = isLoggedIn): Promise<void> {
+  if (!(await checkLogin())) throw new ShopeeAuthRequiredError();
+}

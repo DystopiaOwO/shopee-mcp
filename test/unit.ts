@@ -7,12 +7,42 @@
 import assert from 'node:assert/strict';
 import { flattenSearchItems } from '../src/tools/search.js';
 import { formatPrice } from '../src/utils/price.js';
-import { parseProductUrl, priceText } from '../src/tools/product.js';
+import {
+  parseProductUrl,
+  priceText,
+  resolveProductIds,
+  specLines,
+  shippingLines,
+  sellerLines,
+} from '../src/tools/product.js';
+import { buildSearchPath } from '../src/tools/search.js';
+import { starBreakdown, formatReview } from '../src/tools/reviews.js';
+import { formatDuration, formatShop } from '../src/tools/shop.js';
+import { collectFlashItems, flashStockText, formatTime } from '../src/tools/flashsale.js';
+import { formatCart, modelOptionLabels, findCartItem } from '../src/tools/cart.js';
+import {
+  humanizeLabel,
+  collectOrders,
+  formatOrder,
+  formatOrderDetail,
+  voucherBenefit,
+  decodeNotificationText,
+  formatNotification,
+} from '../src/tools/account.js';
+import { shopVouchersFrom, formatShopVouchers } from '../src/tools/actions.js';
+import {
+  accountToolsSetting,
+  registerAccountTool,
+  setLoggedIn,
+  accountModeActive,
+  refreshAccountMode,
+} from '../src/account-mode.js';
+import type { RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { buildVariantRows } from '../src/tools/variants.js';
-import { shopeeCapture, ShopeeAuthRequiredError } from '../src/api/client.js';
+import { shopeeCapture, requireLogin, ShopeeAuthRequiredError } from '../src/api/client.js';
 import { cache } from '../src/utils/cache.js';
 import { regionFor } from '../src/browser/session.js';
-import type { SearchItem, ItemBasic, PdpModel } from '../src/api/types.js';
+import type { SearchItem, ItemBasic, PdpModel, PdpItem, Rating } from '../src/api/types.js';
 
 let failures = 0;
 const pending: Array<{ name: string; fn: () => void | Promise<void> }> = [];
@@ -524,6 +554,515 @@ test('shopeeCapture: a session that lapses mid-request skips the retry', async (
     ShopeeAuthRequiredError,
   );
   assert.equal(calls, 1, 'should not retry once the session is gone');
+});
+
+// ─── search filters ──────────────────────────────────────────────────────────
+
+test('buildSearchPath: plain query maps sort and zero-based page', () => {
+  const qs = new URLSearchParams(buildSearchPath('laptop', 2, 'price_low').split('?')[1]);
+  assert.equal(qs.get('keyword'), 'laptop');
+  assert.equal(qs.get('page'), '1');
+  assert.equal(qs.get('sortBy'), 'price');
+  assert.equal(qs.get('order'), 'asc');
+  assert.equal(qs.get('minPrice'), null);
+});
+
+test('buildSearchPath: filters become the search page’s own params', () => {
+  const path = buildSearchPath('keyboard', 1, 'relevance', {
+    minPrice: 200000,
+    maxPrice: 500000,
+    minRating: 4,
+    location: 'DKI Jakarta',
+    officialMallOnly: true,
+  });
+  const qs = new URLSearchParams(path.split('?')[1]);
+  assert.equal(qs.get('minPrice'), '200000');
+  assert.equal(qs.get('maxPrice'), '500000');
+  assert.equal(qs.get('ratingFilter'), '4');
+  assert.equal(qs.get('locations'), 'DKI Jakarta');
+  assert.equal(qs.get('officialMall'), 'true');
+});
+
+test('buildSearchPath: officialMallOnly=false adds no param', () => {
+  assert.ok(
+    !buildSearchPath('x', 1, 'relevance', { officialMallOnly: false }).includes('officialMall'),
+  );
+});
+
+// ─── product detail enrichment ───────────────────────────────────────────────
+
+test('resolveProductIds: prefers explicit ids, falls back to the URL', () => {
+  assert.deepEqual(resolveProductIds('1', '2', 'https://shopee.co.id/product/3/4'), {
+    shopId: '1',
+    itemId: '2',
+  });
+  assert.deepEqual(resolveProductIds(undefined, '2', 'https://shopee.co.id/product/3/4'), {
+    shopId: '3',
+    itemId: '4',
+  });
+  assert.equal(resolveProductIds(), null);
+});
+
+test('specLines: keeps real specs, drops synthetic rows and "-" blanks', () => {
+  const lines = specLines([
+    { name: 'Discount stock', value: 'IN STOCK', id: null },
+    { name: 'Brand', value: '-', id: 1 },
+    { name: 'Material', value: 'Synthetic', id: 100134 },
+  ]);
+  assert.deepEqual(lines, ['  • Material: Synthetic']);
+});
+
+test('shippingLines: origin, fee range, free-shipping threshold and delivery estimate', () => {
+  const lines = shippingLines(
+    {
+      free_shipping: {
+        has_fss: true,
+        min_spend: { single_value: 15000000000, range_min: -1, range_max: -1 },
+      },
+      shipping_fee_info: {
+        ship_from_location: 'KAB. BANDUNG',
+        price: { single_value: -1, range_min: 0, range_max: 1500000000 },
+      },
+      ungrouped_channel_infos: [
+        { name: 'Reguler', channel_delivery_info: { edt_text: 'Guaranteed to get by 1 Oct' } },
+      ],
+    },
+    'IDR',
+  );
+  assert.deepEqual(lines, [
+    '  📍 Ships from: KAB. BANDUNG',
+    '  💸 Shipping fee: Rp0 – Rp15.000',
+    '  🚚 Free shipping on orders over Rp150.000',
+    '  🕒 Reguler: Guaranteed to get by 1 Oct',
+  ]);
+});
+
+test('shippingLines: nothing to say without a shipping block', () => {
+  assert.deepEqual(shippingLines(undefined, 'IDR'), []);
+});
+
+test('sellerLines: badges, stats and a vacation warning', () => {
+  const lines = sellerLines({
+    shopid: 9,
+    name: 'Doclo.id',
+    rating_star: 4.71,
+    response_rate: 79,
+    follower_count: 2634,
+    is_shopee_verified: true,
+    vacation: true,
+  });
+  assert.equal(lines[0], '  🏪 Doclo.id [Verified] — Shop ID `9`');
+  assert.equal(lines[1], '  ⭐ 4.7 | 💬 79% response | 👥 2.634 followers');
+  assert.ok(lines[2].includes('vacation'));
+});
+
+// ─── reviews ─────────────────────────────────────────────────────────────────
+
+test('starBreakdown: lists 5★ first from Shopee’s 1★..5★ array', () => {
+  assert.equal(
+    starBreakdown({ rating_total: 10, rating_count: [1, 2, 3, 4, 1000] }),
+    '5★ 1.000 · 4★ 4 · 3★ 3 · 2★ 2 · 1★ 1',
+  );
+});
+
+function fakeRating(overrides: Partial<Rating> = {}): Rating {
+  return {
+    cmtid: 1,
+    rating_star: 4,
+    comment: 'Bagus\nsekali',
+    author_username: 'buyer1',
+    anonymous: false,
+    ctime: 1771988322,
+    like_count: 3,
+    images: ['a', 'b'],
+    videos: [{}],
+    product_items: [{ model_name: 'Red,M' }],
+    ...overrides,
+  };
+}
+
+test('formatReview: stars, author, date, variant, media and likes', () => {
+  const [head, body] = formatReview(fakeRating(), 7).split('\n');
+  assert.equal(head, '7. ★★★★☆ | buyer1 | 2026-02-25 | variant: Red,M | 📷 3 | 👍 3');
+  assert.equal(body, '   Bagus sekali');
+});
+
+test('formatReview: hides the name of anonymous reviewers', () => {
+  assert.ok(formatReview(fakeRating({ anonymous: true }), 1).includes('| Anonymous |'));
+});
+
+test('formatReview: includes the seller reply and marks empty comments', () => {
+  const out = formatReview(
+    fakeRating({ comment: '', ItemRatingReply: { comment: 'Terima kasih!' } }),
+    1,
+  );
+  assert.ok(out.includes('(no written comment)'));
+  assert.ok(out.includes('↳ Seller: Terima kasih!'));
+});
+
+// ─── shops ───────────────────────────────────────────────────────────────────
+
+test('formatDuration: minutes, hours, days — without "60 min"', () => {
+  assert.equal(formatDuration(20), '1 min');
+  assert.equal(formatDuration(600), '10 min');
+  assert.equal(formatDuration(3570), '1 h');
+  assert.equal(formatDuration(3 * 86400), '3 days');
+});
+
+test('formatShop: badges, stats and profile link by username', () => {
+  const now = 1790684086 * 1000 + 240 * 1000;
+  const text = formatShop(
+    {
+      shopid: 1166009254,
+      name: 'Royal Kludge Official Shop',
+      account: { username: 'royalkludge_official' },
+      is_official_shop: true,
+      rating_star: 4.927,
+      item_count: 128,
+      follower_count: 9830,
+      response_rate: 93,
+      response_time: 3570,
+      ctime: 1705363200,
+      last_active_time: 1790684086,
+    },
+    now,
+  );
+  assert.ok(text.startsWith('🏪 **Royal Kludge Official Shop** [Shopee Mall]'));
+  assert.ok(text.includes('⭐ Shop rating: 4.93'));
+  assert.ok(text.includes('💬 Chat response: 93% (within ~1 h)'));
+  assert.ok(text.includes('📅 Joined: 2024-01-16'));
+  assert.ok(text.includes('🕒 Last active: 4 min ago'));
+  assert.ok(text.includes('/royalkludge_official'));
+  assert.ok(!text.includes('\n\n\n'), 'no doubled blank lines from omitted rows');
+});
+
+// ─── flash sale ──────────────────────────────────────────────────────────────
+
+test('collectFlashItems: merges batches and drops duplicates and other calls', () => {
+  const batch = (ids: number[]) => ({
+    url: 'https://shopee.co.id/api/v4/flash_sale/flash_sale_batch_get_items',
+    postData: '',
+    json: {
+      data: { items: ids.map((id) => ({ itemid: id, shopid: 1, name: `#${id}`, price: 1 })) },
+    },
+  });
+  const items = collectFlashItems([
+    batch([1, 2]),
+    { url: 'https://shopee.co.id/api/v4/flash_sale/get_all_sessions', postData: '', json: {} },
+    batch([2, 3]),
+  ]);
+  assert.deepEqual(
+    items.map((i) => i.itemid),
+    [1, 2, 3],
+  );
+});
+
+test('flashStockText: claimed vs. allocated, and sold out', () => {
+  const base = { itemid: 1, shopid: 1, name: 'x', price: 1 };
+  assert.equal(flashStockText({ ...base, stock: 593, flash_sale_stock: 600 }), '📦 7/600 claimed');
+  assert.equal(flashStockText({ ...base, stock: 0, flash_sale_stock: 600 }), '🔥 Sold out');
+  assert.equal(flashStockText(base), '');
+});
+
+test('formatTime: renders in the given storefront timezone', () => {
+  // 2026-09-29 11:00 UTC is 18:00 in Jakarta.
+  assert.ok(formatTime(1790679600, 'Asia/Jakarta').includes('18:00'));
+});
+
+// ─── experimental cart ───────────────────────────────────────────────────────
+
+test('formatCart: groups by shop and totals quantity × price', () => {
+  const text = formatCart(
+    [
+      {
+        shops: [{ shopid: 1, shopname: 'Toko A' }],
+        items: [
+          {
+            itemid: 10,
+            shopid: 1,
+            modelid: 5,
+            name: 'Kaos',
+            model_name: 'Hitam',
+            price: 5000000,
+            quantity: 2,
+          },
+        ],
+      },
+      { shops: [{ shopid: 2, shopname: 'Empty' }], items: [] },
+    ],
+    'IDR',
+  );
+  assert.ok(text.startsWith('🛒 **Shopee Cart** — 2 items, Rp100 before vouchers & shipping'));
+  assert.ok(text.includes('🏪 **Toko A**'));
+  assert.ok(text.includes('• Kaos (Hitam)'));
+  assert.ok(text.includes('2 × Rp50 | model_id: `5`'));
+  assert.ok(!text.includes('Empty'));
+});
+
+test('formatCart: an empty cart says so', () => {
+  assert.equal(formatCart([], 'IDR'), '🛒 Your Shopee cart is empty.');
+});
+
+test('modelOptionLabels: maps a model’s tier indexes to option labels', () => {
+  const item = {
+    item_id: 1,
+    shop_id: 1,
+    title: 't',
+    tier_variations: [
+      { name: 'Warna', options: ['Merah', 'Biru'] },
+      { name: 'Ukuran', options: ['M', 'L'] },
+    ],
+  } as PdpItem;
+  const model = {
+    model_id: 9,
+    name: 'Biru,L',
+    price: 1,
+    extinfo: { tier_index: [1, 1] },
+  } as PdpModel;
+  assert.deepEqual(modelOptionLabels(item, model), ['Biru', 'L']);
+});
+
+test('modelOptionLabels: null when the indexes don’t line up with the tiers', () => {
+  const item = {
+    item_id: 1,
+    shop_id: 1,
+    title: 't',
+    tier_variations: [{ name: 'Warna', options: ['Merah'] }],
+  } as PdpItem;
+  const model = { model_id: 9, name: 'x', price: 1, extinfo: { tier_index: [3] } } as PdpModel;
+  assert.equal(modelOptionLabels(item, model), null);
+});
+
+test('modelOptionLabels: a listing without variants needs no clicks', () => {
+  const item = { item_id: 1, shop_id: 1, title: 't' } as PdpItem;
+  assert.deepEqual(modelOptionLabels(item, { model_id: 1, name: '', price: 1 }), []);
+});
+
+test('requireLogin: throws the login prompt error when signed out', async () => {
+  await requireLogin(async () => true);
+  await assert.rejects(() => requireLogin(async () => false), ShopeeAuthRequiredError);
+});
+
+// ─── account mode ────────────────────────────────────────────────────────────
+
+test('accountToolsSetting: defaults to auto, "off"/"false"/"0" turn it off', () => {
+  assert.equal(accountToolsSetting(undefined), 'auto');
+  assert.equal(accountToolsSetting('auto'), 'auto');
+  assert.equal(accountToolsSetting('OFF'), 'off');
+  assert.equal(accountToolsSetting('false'), 'off');
+  assert.equal(accountToolsSetting('0'), 'off');
+});
+
+test('account mode: tools start hidden, show on login, hide on logout', async () => {
+  const tool = { enabled: true } as RegisteredTool;
+  setLoggedIn(false);
+  registerAccountTool(tool);
+  assert.equal(tool.enabled, false, 'hidden until a login is confirmed');
+  await refreshAccountMode(async () => true);
+  assert.equal(tool.enabled, true);
+  assert.equal(accountModeActive(), true);
+  await refreshAccountMode(async () => {
+    throw new Error('browser died');
+  });
+  assert.equal(tool.enabled, false, 'a failed check falls back to read-only');
+});
+
+// ─── account reads ───────────────────────────────────────────────────────────
+
+test('humanizeLabel: turns Shopee translation keys into words', () => {
+  assert.equal(humanizeLabel('label_order_completed'), 'Order completed');
+  assert.equal(humanizeLabel('label_cancelled'), 'Cancelled');
+  assert.equal(humanizeLabel(undefined), 'Unknown');
+});
+
+const fakeOrder = (id: number) => ({
+  status: { list_view_status_label: { text: 'label_completed' } },
+  info_card: {
+    order_id: id,
+    final_total: 58900000000,
+    order_list_cards: [
+      {
+        shop_info: { shop_id: 1, shop_name: 'iconcomp' },
+        product_info: {
+          item_groups: [
+            {
+              items: [
+                {
+                  item_id: 5,
+                  shop_id: 1,
+                  name: 'NVME 256GB',
+                  model_name: 'Hitam',
+                  amount: 1,
+                  order_price: 65000000000,
+                },
+              ],
+            },
+          ],
+        },
+      },
+    ],
+  },
+});
+
+test('collectOrders: reads both list shapes and de-duplicates across pages', () => {
+  const orders = collectOrders([
+    {
+      url: 'x/get_all_order_and_checkout_list',
+      postData: '',
+      json: {
+        new_data: {
+          order_or_checkout_data: [
+            { order_list_detail: fakeOrder(1) },
+            { order_list_detail: fakeOrder(2) },
+          ],
+        },
+      },
+    },
+    {
+      url: 'x/get_order_list',
+      postData: '',
+      json: { data: { details_list: [fakeOrder(2), fakeOrder(3)] } },
+    },
+  ]);
+  assert.deepEqual(
+    orders.map((o) => o.info_card?.order_id),
+    [1, 2, 3],
+  );
+});
+
+test('formatOrder: status, shop, items and total', () => {
+  const out = formatOrder(fakeOrder(7), 1);
+  assert.ok(out.startsWith('1. **Order `7`** — Completed'));
+  assert.ok(out.includes('🏪 iconcomp'));
+  assert.ok(out.includes('• NVME 256GB (Hitam) × 1 — Rp650.000'));
+  assert.ok(out.includes('💰 Total: Rp589.000'));
+});
+
+test('formatOrderDetail: timeline and tracking, never the address or phone', () => {
+  const detail = {
+    status: { status_label: { text: 'label_order_completed' } },
+    pc_shipping: {
+      fulfilment_carrier: { text: 'Anteraja Sameday' },
+      forder_shipping_info_list: [
+        {
+          tracking_number: 'TRK1',
+          tracking_info_list: [{ ctime: 1788430222, description: 'Delivered.' }],
+        },
+      ],
+    },
+    info_card: { final_total: 58900000000, currency: 'IDR', parcel_cards: [] },
+    payment_method: { payment_channel_name: { text: 'QRIS' } },
+    pc_processing_info: {
+      order_sn: 'SN1',
+      create_time: 1788399955,
+      complete_time: 1788630439,
+      is_rated: false,
+    },
+    address: {
+      shipping_name: 'Secret Name',
+      shipping_phone: '628000',
+      shipping_address: 'Jalan Rahasia 1',
+    },
+  };
+  const out = formatOrderDetail('9', detail as Parameters<typeof formatOrderDetail>[1]);
+  assert.ok(out.includes('Order completed'));
+  assert.ok(out.includes('Courier: Anteraja Sameday'));
+  assert.ok(out.includes('Tracking no.: TRK1'));
+  assert.ok(out.includes('💳 Payment: QRIS'));
+  assert.ok(out.includes('Ordered:'));
+  for (const secret of ['Secret Name', '628000', 'Jalan Rahasia']) {
+    assert.ok(!out.includes(secret), `leaked ${secret}`);
+  }
+});
+
+test('voucherBenefit: fixed, percentage with cap, and coin cashback', () => {
+  assert.equal(voucherBenefit({ discount_value: 1000000000 }, 'IDR'), 'Rp10.000 off');
+  assert.equal(
+    voucherBenefit({ discount_percentage: 8, discount_cap: 100000000000 }, 'IDR'),
+    '8% off (max Rp1.000.000)',
+  );
+  assert.equal(
+    voucherBenefit({ reward_percentage: 10, reward_cap: 2500000 }, 'IDR'),
+    '10% coins cashback (max 25 coins)',
+  );
+});
+
+test('decodeNotificationText: hex UTF-8 with HTML stripped; plain text passes through', () => {
+  const hex = Buffer.from('Toko <b>Blue</b> 👉', 'utf8').toString('hex');
+  assert.equal(decodeNotificationText(hex), 'Toko Blue 👉');
+  assert.equal(decodeNotificationText('Plain title'), 'Plain title');
+  assert.equal(decodeNotificationText(undefined), '');
+});
+
+test('formatNotification: title, time, order link and body', () => {
+  const out = formatNotification(
+    {
+      title: Buffer.from('Confirm Receipt').toString('hex'),
+      content: Buffer.from('Rate your items').toString('hex'),
+      createtime: 1790679600,
+      id_info: { orderid: 243739605230995 },
+    },
+    2,
+  );
+  assert.ok(out.startsWith('2. **Confirm Receipt** ('));
+  assert.ok(out.includes('order `243739605230995`'));
+  assert.ok(out.endsWith('Rate your items'));
+});
+
+// ─── account actions ─────────────────────────────────────────────────────────
+
+test('shopVouchersFrom / formatShopVouchers: lists vouchers and marks claimed ones', () => {
+  const tab = {
+    data: {
+      decoration: [
+        { shop_voucher: null },
+        {
+          shop_voucher: {
+            voucher_list: [
+              {
+                promotionid: 1,
+                voucher_code: 'A',
+                discount_value: 5390000000,
+                min_spend: 53900000000,
+              },
+              {
+                promotionid: 2,
+                voucher_code: 'B',
+                discount_value: 100000000,
+                is_claimed_before: true,
+              },
+            ],
+          },
+        },
+      ],
+    },
+  };
+  const vouchers = shopVouchersFrom(tab);
+  assert.equal(vouchers.length, 2);
+  const out = formatShopVouchers('9', vouchers);
+  assert.ok(out.includes('**Rp53.900 off** | code `A`'));
+  assert.ok(out.includes('min. spend Rp539.000'));
+  assert.ok(out.split('\n').find((l) => l.includes('code `B`')) !== undefined);
+  assert.ok(out.includes('✅ claimed'));
+  assert.ok(formatShopVouchers('9', []).includes('no claimable vouchers'));
+});
+
+test('findCartItem: by item, by item+model, and ambiguous multi-variant lines', () => {
+  const blocks = [
+    {
+      items: [
+        { itemid: 1, shopid: 9, modelid: 10, name: 'A', price: 1, quantity: 1 },
+        { itemid: 1, shopid: 9, modelid: 11, name: 'A', price: 1, quantity: 2 },
+        { itemid: 2, shopid: 9, modelid: 20, name: 'B', price: 1, quantity: 1 },
+      ],
+    },
+  ];
+  assert.equal(findCartItem(blocks, '2').item?.modelid, 20);
+  assert.equal(findCartItem(blocks, '1', '11').item?.quantity, 2);
+  const ambiguous = findCartItem(blocks, '1');
+  assert.equal(ambiguous.item, undefined);
+  assert.equal(ambiguous.matches.length, 2);
+  assert.equal(findCartItem(blocks, '3').matches.length, 0);
 });
 
 await runTests();

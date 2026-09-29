@@ -103,6 +103,63 @@ function priceText(r: SearchResult, fallbackCurrency: string): string {
   return formatPrice(r.price, currency);
 }
 
+export interface ResultListOptions {
+  /** First line of the listing, e.g. `🛒 Search Results for "laptop"`. */
+  title: string;
+  page: number;
+  limit: number;
+  totalCount: number;
+  nomore: boolean;
+}
+
+/**
+ * Render a page of normalised results. Shared by keyword search and a shop's
+ * product listing, which both come back as `search_items` payloads.
+ */
+export function formatResultList(items: SearchResult[], opts: ResultListOptions): string {
+  const { page, limit, totalCount } = opts;
+  const shown = items.slice(0, limit);
+  // Estimate only: `items.length` is Shopee's per-request page size, but flattening
+  // an ads card into multiple real_items (see flattenSearchItems) can inflate it
+  // above that true size, undercounting totalPages. Shopee doesn't expose the real
+  // page size otherwise, so this stays an approximation — it doesn't affect
+  // pagination itself, only the displayed page count.
+  const totalPages = totalCount > 0 ? Math.ceil(totalCount / items.length) : page;
+
+  const lines: string[] = [
+    opts.title,
+    `📊 ${totalCount.toLocaleString('id-ID')} total products | Page ${page}${totalPages > 1 ? `/${totalPages}` : ''}`,
+    ``,
+  ];
+
+  shown.forEach((r, i) => {
+    const rank = (page - 1) * limit + i + 1;
+    const rating = r.ratingStar ? `⭐ ${r.ratingStar.toFixed(1)}` : '⭐ N/A';
+    // Newer cards give a pre-formatted string ("20k+ sold"); older ones a raw count.
+    const soldLabel = r.soldText
+      ? r.soldText
+      : r.sold
+        ? `${r.sold.toLocaleString('id-ID')} sold`
+        : '';
+    const soldText = soldLabel ? ` | 📦 ${soldLabel}` : '';
+    const official = r.isOfficialShop ? ' [Shopee Mall]' : '';
+    const url = `${BASE_URL}/product/${r.shopid}/${r.itemid}`;
+
+    lines.push(`${rank}. **${r.name}**`);
+    lines.push(`   💰 ${priceText(r, CURRENCY)}`);
+    lines.push(
+      `   ${rating}${soldText} | 🏪 ${r.shopLocation || 'N/A'}${official} | 🆔 ${r.itemid}`,
+    );
+    lines.push(`   🔗 ${url}`);
+    if (i < shown.length - 1) lines.push('');
+  });
+
+  if (!opts.nomore) {
+    lines.push(``, `📄 Use page=${page + 1} to see more results.`);
+  }
+  return lines.join('\n');
+}
+
 // Sort option → Shopee search-URL params.
 const SORT_MAP: Record<string, { sortBy: string; order?: string }> = {
   relevance: { sortBy: 'relevancy' },
@@ -112,10 +169,43 @@ const SORT_MAP: Record<string, { sortBy: string; order?: string }> = {
   price_high: { sortBy: 'price', order: 'desc' },
 };
 
+export interface SearchFilters {
+  /** Whole currency units, as typed into Shopee's price-range box. */
+  minPrice?: number;
+  maxPrice?: number;
+  /** Minimum star rating, 1-5. */
+  minRating?: number;
+  /** Seller location as Shopee lists it under "Shipped From", e.g. "DKI Jakarta". */
+  location?: string;
+  officialMallOnly?: boolean;
+}
+
+/**
+ * Build the /search page URL. The filters are the page's own query params —
+ * Shopee's app reads them and forwards them to search_items (as price_min,
+ * rating_filter, locations, official_mall), so we never craft the API call.
+ */
+export function buildSearchPath(
+  query: string,
+  page: number,
+  sort: string,
+  filters: SearchFilters = {},
+): string {
+  const { sortBy, order } = SORT_MAP[sort] ?? SORT_MAP.relevance;
+  const qs = new URLSearchParams({ keyword: query, page: String(page - 1), sortBy });
+  if (order) qs.set('order', order);
+  if (filters.minPrice !== undefined) qs.set('minPrice', String(filters.minPrice));
+  if (filters.maxPrice !== undefined) qs.set('maxPrice', String(filters.maxPrice));
+  if (filters.minRating !== undefined) qs.set('ratingFilter', String(filters.minRating));
+  if (filters.location) qs.set('locations', filters.location);
+  if (filters.officialMallOnly) qs.set('officialMall', 'true');
+  return `/search?${qs.toString()}`;
+}
+
 export function registerSearchTools(server: McpServer): void {
   server.tool(
     'search_products',
-    'Search for products on Shopee by keyword, with sorting and pagination. ' +
+    'Search for products on Shopee by keyword, with sorting, filters (price range, minimum rating, seller location, Shopee Mall only) and pagination. ' +
       'Returns product names, prices, sold counts, ratings, seller location, product IDs, and direct URLs. ' +
       'Requires a one-time login (run `npm run login`) because Shopee blocks anonymous requests.',
     {
@@ -132,71 +222,62 @@ export function registerSearchTools(server: McpServer): void {
         .enum(['relevance', 'newest', 'top_sales', 'price_low', 'price_high'])
         .default('relevance')
         .describe('Sort order (default: relevance)'),
+      minPrice: z
+        .number()
+        .min(0)
+        .optional()
+        .describe('Minimum price in whole currency units, e.g. 200000 for Rp200.000'),
+      maxPrice: z.number().min(0).optional().describe('Maximum price in whole currency units'),
+      minRating: z
+        .number()
+        .int()
+        .min(1)
+        .max(5)
+        .optional()
+        .describe('Only products rated at least this many stars (1-5)'),
+      location: z
+        .string()
+        .optional()
+        .describe('Seller location as Shopee names it, e.g. "DKI Jakarta", "Jawa Barat"'),
+      officialMallOnly: z
+        .boolean()
+        .optional()
+        .describe('Only products from Shopee Mall (official) shops'),
     },
-    async ({ query, page, limit, sort }) => {
+    { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
+    async ({ query, page, limit, sort, ...filters }) => {
       return withErrorHandling(async () => {
-        const cacheKey = cache.key('search', query, page, limit, sort);
+        const cacheKey = cache.key('search', query, page, limit, sort, JSON.stringify(filters));
         const cached = cache.get<string>(cacheKey);
         if (cached) return { content: [{ type: 'text', text: cached }] };
 
-        const { sortBy, order } = SORT_MAP[sort] ?? SORT_MAP.relevance;
-        const qs = new URLSearchParams({ keyword: query, page: String(page - 1), sortBy });
-        if (order) qs.set('order', order);
-        const searchUrl = shopeeUrl(`/search?${qs.toString()}`);
-
+        const searchUrl = shopeeUrl(buildSearchPath(query, page, sort, filters));
         const data = await shopeeCapture<SearchItemsResponse>(searchUrl, 'search/search_items');
 
         const items = flattenSearchItems(data.items);
         if (items.length === 0) {
+          const filtered = Object.values(filters).some((v) => v !== undefined);
           return {
             content: [
-              { type: 'text', text: `No products found for "${query}". Try a different keyword.` },
+              {
+                type: 'text',
+                text:
+                  `No products found for "${query}"` +
+                  (filtered
+                    ? ' with these filters. Try loosening them.'
+                    : '. Try a different keyword.'),
+              },
             ],
           };
         }
 
-        const shown = items.slice(0, limit);
-        const totalCount = data.total_count ?? 0;
-        // Estimate only: `items.length` is Shopee's per-request page size, but flattening
-        // an ads card into multiple real_items (see flattenSearchItems) can inflate it
-        // above that true size, undercounting totalPages. Shopee doesn't expose the real
-        // page size otherwise, so this stays an approximation — it doesn't affect
-        // pagination itself, only the displayed page count.
-        const totalPages = totalCount > 0 ? Math.ceil(totalCount / items.length) : page;
-
-        const lines: string[] = [
-          `🛒 Search Results for "${query}"`,
-          `📊 ${totalCount.toLocaleString('id-ID')} total products | Page ${page}${totalPages > 1 ? `/${totalPages}` : ''}`,
-          ``,
-        ];
-
-        shown.forEach((r, i) => {
-          const rank = (page - 1) * limit + i + 1;
-          const rating = r.ratingStar ? `⭐ ${r.ratingStar.toFixed(1)}` : '⭐ N/A';
-          // Newer cards give a pre-formatted string ("20k+ sold"); older ones a raw count.
-          const soldLabel = r.soldText
-            ? r.soldText
-            : r.sold
-              ? `${r.sold.toLocaleString('id-ID')} sold`
-              : '';
-          const soldText = soldLabel ? ` | 📦 ${soldLabel}` : '';
-          const official = r.isOfficialShop ? ' [Shopee Mall]' : '';
-          const url = `${BASE_URL}/product/${r.shopid}/${r.itemid}`;
-
-          lines.push(`${rank}. **${r.name}**`);
-          lines.push(`   💰 ${priceText(r, CURRENCY)}`);
-          lines.push(
-            `   ${rating}${soldText} | 🏪 ${r.shopLocation || 'N/A'}${official} | 🆔 ${r.itemid}`,
-          );
-          lines.push(`   🔗 ${url}`);
-          if (i < shown.length - 1) lines.push('');
+        const text = formatResultList(items, {
+          title: `🛒 Search Results for "${query}"`,
+          page,
+          limit,
+          totalCount: data.total_count ?? 0,
+          nomore: data.nomore,
         });
-
-        if (!data.nomore) {
-          lines.push(``, `📄 Use page=${page + 1} to see more results.`);
-        }
-
-        const text = lines.join('\n');
         cache.set(cacheKey, text);
         return { content: [{ type: 'text', text }] };
       });

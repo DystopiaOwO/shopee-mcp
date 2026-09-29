@@ -141,16 +141,28 @@ export async function captureJson<T>(pageUrl: string, opts: CaptureOptions): Pro
   return withLock(async () => {
     const page = await getPage();
 
+    // The body is read inside the predicate so an unreadable match is skipped
+    // rather than fatal: a page that redirects (e.g. /<username> → shop page)
+    // fires the call twice, and the first body is gone once it navigates away.
+    let json: T | undefined;
     const matched = page.waitForResponse(
-      (r: Response) => r.url().includes('/api/v4/') && r.url().includes(opts.apiMatch),
+      async (r: Response) => {
+        if (!/\/api\/v\d+\//.test(r.url()) || !r.url().includes(opts.apiMatch)) return false;
+        try {
+          json = (await r.json()) as T;
+          return true;
+        } catch {
+          debug(`Unreadable ${opts.apiMatch} response; waiting for the next one`);
+          return false;
+        }
+      },
       { timeout: timeoutMs },
     );
 
     await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
 
-    const resp = await matched;
-    const json = (await resp.json()) as T;
-    return json;
+    await matched;
+    return json as T;
   });
 }
 
@@ -257,6 +269,96 @@ export async function captureWithSelections<P, S>(
 
     return { primary, selections };
   });
+}
+
+/**
+ * Run a browser operation against the shared logged-in page, holding the same
+ * lock as captureJson so it can't interleave with another tool's navigation.
+ */
+export async function withPage<T>(fn: (page: Page) => Promise<T>): Promise<T> {
+  return withLock(async () => fn(await getPage()));
+}
+
+/** One JSON response gathered by captureAll. */
+export interface CollectedResponse {
+  url: string;
+  /** The request body, for telling apart calls to one endpoint (e.g. cart/update actions). */
+  postData: string;
+  json: unknown;
+}
+
+export interface CollectOptions {
+  /** A response is collected when its URL contains any of these substrings. */
+  apiMatches: string[];
+  /**
+   * Drives the page after navigation (scrolling, clicking filters, paging) while
+   * responses keep being collected. `collected` fills in live, so the callback
+   * can wait on it with waitForCollected.
+   */
+  interact?: (page: Page, collected: CollectedResponse[]) => Promise<void>;
+  timeoutMs?: number;
+}
+
+/**
+ * Navigate to `pageUrl` and collect every matching API response fired while the
+ * page loads and `interact` runs — for data Shopee only fetches on scroll or
+ * click (reviews, flash-sale batches), which a single captureJson can't reach.
+ *
+ * Matches any `/api/vN/` path, not just v4: reviews still live on /api/v2.
+ */
+export async function captureAll(
+  pageUrl: string,
+  opts: CollectOptions,
+): Promise<CollectedResponse[]> {
+  const timeoutMs = opts.timeoutMs ?? 60000;
+  return withLock(async () => {
+    const page = await getPage();
+    const collected: CollectedResponse[] = [];
+    const pending: Promise<void>[] = [];
+
+    const onResponse = (r: Response): void => {
+      const url = r.url();
+      if (!/\/api\/v\d+\//.test(url) || !opts.apiMatches.some((m) => url.includes(m))) return;
+      const postData = r.request().postData() ?? '';
+      pending.push(
+        r
+          .json()
+          .then((json: unknown) => {
+            collected.push({ url, postData, json });
+          })
+          .catch(() => debug(`Unparsable response from ${url}`)),
+      );
+    };
+
+    page.on('response', onResponse);
+    try {
+      await page.goto(pageUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
+      if (opts.interact) await opts.interact(page, collected);
+      await Promise.all(pending);
+    } finally {
+      page.off('response', onResponse);
+    }
+    return collected;
+  });
+}
+
+/**
+ * Poll until `collected` satisfies `done`, or the timeout passes. Resolves to
+ * whether it was satisfied; `tick` runs between polls (e.g. to keep scrolling).
+ */
+export async function waitForCollected(
+  collected: CollectedResponse[],
+  done: (c: CollectedResponse[]) => boolean,
+  timeoutMs: number,
+  tick?: () => Promise<void>,
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (done(collected)) return true;
+    if (tick) await tick();
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  return done(collected);
 }
 
 /** Warm the session once (loads Shopee so the anti-fraud SDK initialises). */

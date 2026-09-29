@@ -1,32 +1,33 @@
 # shopee-mcp
 
+[![npm](https://img.shields.io/npm/v/@bintangtimurlangit/shopee-mcp?style=flat-square)](https://www.npmjs.com/package/@bintangtimurlangit/shopee-mcp)
+[![license](https://img.shields.io/github/license/bintangtimurlangit/shopee-mcp?style=flat-square)](./LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/bintangtimurlangit/shopee-mcp/ci.yml?branch=main&style=flat-square)](https://github.com/bintangtimurlangit/shopee-mcp/actions)
+[![GitHub Repo](https://img.shields.io/badge/GitHub-shopee--mcp-24292f?style=flat-square&logo=github)](https://github.com/bintangtimurlangit/shopee-mcp)
+
 An MCP server for **exploring Shopee** — product search and prices — from any MCP client (Claude Desktop, Claude Code, etc.). Discovery only: no seller features.
 
-This repository is a fork of [`bintangtimurlangit/shopee-mcp`](https://github.com/bintangtimurlangit/shopee-mcp). It keeps the upstream browser-backed product discovery tools.
+> **Login required, read-only.** Shopee blocks anonymous requests, so this **unofficial** server reads public data through your own logged-in browser session (see [Why a browser?](#why-a-browser)). It performs no seller or account actions.
 
-The project is **unofficial** and is not affiliated with Shopee or Sea Limited.
-
-> This fork is currently intended to run **from source**. The upstream npm package does **not** include this fork's cart tools.
+**Full reference:** [Documentation](./docs/README.md) · **Changelog:** [CHANGELOG.md](./CHANGELOG.md) · **Versioning & releases:** [docs/RELEASES.md](./docs/RELEASES.md)
 
 ## Tools
 
-| Tool                   | What it returns                                                                                                                              |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `search_products`      | Keyword search with sorting & pagination — names, prices, sold counts, ratings, seller location, product IDs, URLs.                          |
-| `get_product_detail`   | One product — price & discount, brand, condition, category, rating, **review count**, **sold count**, stock, location, description.          |
-| `get_product_variants` | Every variant of a listing — exact model IDs, variant names, per-variant prices, and availability. Opt into `includeStock` for exact counts. |
-| `check_login_status`   | Whether the saved browser session is currently logged into Shopee — check this before the tools above instead of waiting on a slow failure.  |
+| Tool                 | What it returns                                                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `search_products`    | Keyword search with sorting & pagination — names, prices, sold counts, ratings, seller location, product IDs, URLs.                         |
+| `get_product_detail` | One product — price & discount, brand, condition, category, rating, **review count**, **sold count**, stock, location, description.         |
+| `check_login_status` | Whether the saved browser session is currently logged into Shopee — check this before the tools above instead of waiting on a slow failure. |
 
 ### Tool annotations
 
 Per the [MCP annotations spec](https://modelcontextprotocol.io/) — all tools are read-only, with no side effects.
 
-| Tool                   | Read-only | Idempotent | Destructive |
-| ---------------------- | :-------: | :--------: | :---------: |
-| `search_products`      |     ✓     |     ✓      |      –      |
-| `get_product_detail`   |     ✓     |     ✓      |      –      |
-| `get_product_variants` |     ✓     |     ✓      |      –      |
-| `check_login_status`   |     ✓     |     ✓      |      –      |
+| Tool                 | Read-only | Idempotent | Destructive |
+| -------------------- | :-------: | :--------: | :---------: |
+| `search_products`    |     ✓     |     ✓      |      –      |
+| `get_product_detail` |     ✓     |     ✓      |      –      |
+| `check_login_status` |     ✓     |     ✓      |      –      |
 
 ## Why a browser?
 
@@ -39,23 +40,21 @@ So this server:
 
 The browser must run **headed** (Shopee detects headless); on a server use a virtual display (`xvfb`).
 
-### Quick start
+### From npm (recommended)
 
 ```bash
-git clone https://github.com/dennislwy/shopee-mcp.git
+npm install -g @bintangtimurlangit/shopee-mcp   # downloads the CloakBrowser binary (~200 MB, cached)
+```
+
+This puts two commands on your PATH: **`shopee-mcp`** (the server) and **`shopee-mcp-login`** (one-time login). Or run without installing: `npx -y @bintangtimurlangit/shopee-mcp`.
+
+### From source
+
+```bash
+git clone https://github.com/bintangtimurlangit/shopee-mcp.git
 cd shopee-mcp
 npm install          # also downloads the CloakBrowser binary (~200 MB, cached)
 npm run build
-```
-
-### Configure Malaysia Shopee
-
-Copy `.env.example` to `.env` and use:
-
-```env
-SHOPEE_DOMAIN=shopee.com.my
-SHOPEE_HEADLESS=false
-DEBUG=false
 ```
 
 ### 1. Log in once
@@ -63,29 +62,31 @@ DEBUG=false
 Shopee blocks anonymous requests, so you sign in one time. This saves a session to `~/.shopee-mcp/chrome-profile`.
 
 ```bash
-npm run login
+shopee-mcp-login     # global install — or, from a source checkout:  npm run login
 ```
 
 - Opens a CloakBrowser window — log in, then press Enter.
 - On a desktop / WSLg, the window appears normally.
 - Re-run only when the session expires.
 
-### 2. Register with an MCP client
+### 2. Register with your MCP client
 
-After building, point the client at the fork's `build/index.js`.
+The server launches a **headed** browser, so it needs a display. On a headless machine, wrap it with `xvfb-run`.
+
+Claude Desktop / Claude Code `mcpServers` entry:
 
 ```json
 {
   "mcpServers": {
     "shopee": {
-      "command": "node",
-      "args": ["C:\\absolute\\path\\to\\shopee-mcp\\build\\index.js"]
+      "command": "xvfb-run",
+      "args": ["-a", "shopee-mcp"]
     }
   }
 }
 ```
 
-On macOS/Linux desktop, use the appropriate absolute path. On a Linux server without a display, wrap the command with `xvfb-run -a`.
+On a machine with a real display, drop `xvfb-run`: `"command": "shopee-mcp"`, `"args": []`. From a source checkout, use `"command": "node"`, `"args": ["/absolute/path/to/shopee-mcp/build/index.js"]` (wrapped in `xvfb-run` on a headless box).
 
 ## Configuration
 
@@ -94,8 +95,6 @@ All optional — see `.env.example`. Copy to `.env` to override.
 | Variable             | Default                        | Purpose                              |
 | -------------------- | ------------------------------ | ------------------------------------ |
 | `SHOPEE_DOMAIN`      | `shopee.co.id`                 | Regional Shopee domain.              |
-| `SHOPEE_LOCALE`      | _derived from domain_          | Browser locale (e.g. `en-MY`).       |
-| `SHOPEE_TIMEZONE`    | _derived from domain_          | Browser timezone.                    |
 | `SHOPEE_PROFILE_DIR` | `~/.shopee-mcp/chrome-profile` | Where the saved login lives.         |
 | `SHOPEE_HEADLESS`    | `false`                        | Keep `false` — headless is detected. |
 | `CACHE_TTL_MS`       | `30000`                        | In-memory cache lifetime.            |
@@ -134,11 +133,9 @@ More detail: **[docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)**.
 
 [CONTRIBUTING.md](./CONTRIBUTING.md) · [SECURITY.md](./SECURITY.md) · [Code of Conduct](./CODE_OF_CONDUCT.md)
 
-## Upstream and license
+## License
 
-Original project: [`bintangtimurlangit/shopee-mcp`](https://github.com/bintangtimurlangit/shopee-mcp)
-
-This fork retains the upstream MIT license and copyright notice. See [`LICENSE`](./LICENSE).
+[MIT](./LICENSE)
 
 ---
 

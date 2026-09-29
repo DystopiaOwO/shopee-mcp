@@ -220,5 +220,136 @@ export interface PdpResponse {
     item: PdpItem;
     product_price: PdpProductPrice;
     product_review?: PdpProductReview;
+    product_attributes?: { attrs?: PdpAttribute[] | null } | null;
+    product_shipping?: PdpShipping | null;
+    shop_detailed?: PdpShop | null;
   };
+}
+
+/** get_pc → data.product_attributes: the listing's spec sheet. */
+export interface PdpAttribute {
+  name: string;
+  value: string;
+  /** Null on Shopee's synthetic rows (e.g. "Discount stock"), set on real specs. */
+  id?: number | null;
+}
+
+export interface PdpChannel {
+  name: string;
+  price?: PdpPriceValue;
+  channel_delivery_info?: { edt_text?: string | null } | null;
+}
+
+/** get_pc → data.product_shipping. */
+export interface PdpShipping {
+  free_shipping?: { min_spend?: PdpPriceValue | null; has_fss?: boolean } | null;
+  shipping_fee_info?: { ship_from_location?: string; price?: PdpPriceValue } | null;
+  ungrouped_channel_infos?: PdpChannel[] | null;
+}
+
+/** get_pc → data.shop_detailed: the seller, bundled with the listing. */
+export interface PdpShop {
+  shopid: number;
+  name: string;
+  place?: string;
+  rating_star?: number;
+  response_rate?: number;
+  follower_count?: number;
+  item_count?: number;
+  is_official_shop?: boolean;
+  is_shopee_verified?: boolean;
+  is_preferred_plus_seller?: boolean;
+  vacation?: boolean;
+}
+
+// ─── Review Types ───────────────────────────────────────────────────────────
+// Subset of /api/v2/item/get_ratings (reviews are still served from v2).
+
+export interface Rating {
+  cmtid: number;
+  rating_star: number;
+  comment?: string | null;
+  author_username?: string | null;
+  anonymous?: boolean;
+  /** Unix seconds. */
+  ctime: number;
+  like_count?: number | null;
+  images?: string[] | null;
+  videos?: unknown[] | null;
+  product_items?: Array<{ model_name?: string | null }> | null;
+  ItemRatingReply?: { comment?: string | null } | null;
+}
+
+export interface RatingSummary {
+  rating_total: number;
+  /** Counts for 1★..5★, in that order. */
+  rating_count: number[];
+  rcount_with_context?: number;
+  rcount_with_media?: number;
+}
+
+export interface RatingsResponse {
+  error?: number;
+  error_msg?: string;
+  data?: {
+    ratings?: Rating[] | null;
+    item_rating_summary?: RatingSummary | null;
+    has_more?: boolean;
+  };
+}
+
+// ─── Shop Types ─────────────────────────────────────────────────────────────
+// Subset of /api/v4/shop/get_shop_base_v2 → data.
+
+export interface ShopBase {
+  shopid: number;
+  userid?: number;
+  name: string;
+  description?: string | null;
+  account?: { username?: string } | null;
+  rating_star?: number;
+  follower_count?: number;
+  item_count?: number;
+  response_rate?: number;
+  /** Seconds. */
+  response_time?: number;
+  /** Unix seconds. */
+  ctime?: number;
+  last_active_time?: number;
+  vacation?: boolean;
+  is_official_shop?: boolean;
+  is_shopee_verified?: boolean;
+  is_preferred_plus_seller?: boolean;
+}
+
+export interface ShopBaseResponse {
+  error?: number;
+  error_msg?: string;
+  data?: ShopBase;
+}
+
+// ─── Flash Sale Types ───────────────────────────────────────────────────────
+
+export interface FlashSaleSession {
+  promotionid: number;
+  name?: string;
+  /** Unix seconds. */
+  start_time: number;
+  end_time: number;
+  is_ongoing?: boolean;
+}
+
+export interface FlashSaleItem {
+  itemid: number;
+  shopid: number;
+  name: string;
+  price: number;
+  price_before_discount?: number;
+  discount?: string | null;
+  /** Units still available at the flash price. */
+  stock?: number;
+  /** Units allocated to the flash sale in total. */
+  flash_sale_stock?: number;
+  promotionid?: number;
+  item_rating?: { rating_star?: number } | null;
 }

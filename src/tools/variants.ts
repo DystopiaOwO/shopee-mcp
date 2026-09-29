@@ -5,7 +5,7 @@ import { BASE_URL, CURRENCY, captureWithSelections } from '../browser/session.js
 import { cache } from '../utils/cache.js';
 import { withErrorHandling } from '../utils/errors.js';
 import { formatPrice } from '../utils/price.js';
-import { parseProductUrl } from './product.js';
+import { resolveProductIds } from './product.js';
 import type { PdpModel, PdpResponse, SelectVariationResponse } from '../api/types.js';
 
 /** Clicking every option on a long list costs a round trip each; keep it sane. */
@@ -74,18 +74,11 @@ export function registerVariantTools(server: McpServer): void {
             'per variant; when off, each variant is reported as in/out of stock.',
         ),
     },
+    { readOnlyHint: true, idempotentHint: true, openWorldHint: true },
     async ({ shopId, itemId, url, includeStock }) => {
       return withErrorHandling(async () => {
-        let sid = shopId;
-        let iid = itemId;
-        if ((!sid || !iid) && url) {
-          const parsed = parseProductUrl(url);
-          if (parsed) {
-            sid = parsed.shopId;
-            iid = parsed.itemId;
-          }
-        }
-        if (!sid || !iid) {
+        const ids = resolveProductIds(shopId, itemId, url);
+        if (!ids) {
           return {
             content: [
               {
@@ -96,6 +89,7 @@ export function registerVariantTools(server: McpServer): void {
           };
         }
 
+        const { shopId: sid, itemId: iid } = ids;
         const cacheKey = cache.key('variants', sid, iid, includeStock);
         const cached = cache.get<string>(cacheKey);
         if (cached) return { content: [{ type: 'text' as const, text: cached }] };
