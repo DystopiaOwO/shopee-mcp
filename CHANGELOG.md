@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-29
+
 ### Added
 
 - **New tool `get_product_reviews`** — rating summary (star breakdown, reviews with comments/media) and pages of buyer reviews with variant bought and seller replies; filter by star rating, comments, or media.
@@ -68,7 +70,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 - **2 tools:** `search_products` (keyword search with sorting & pagination) and `get_product_detail` (price, discount, brand, condition, rating, review/sold counts, stock, location, description).
 - In-memory read cache and a persistent browser profile under `~/.shopee-mcp/`.
 
-[Unreleased]: https://github.com/bintangtimurlangit/shopee-mcp/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/bintangtimurlangit/shopee-mcp/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/bintangtimurlangit/shopee-mcp/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/bintangtimurlangit/shopee-mcp/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/bintangtimurlangit/shopee-mcp/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/bintangtimurlangit/shopee-mcp/releases/tag/v0.1.0
